@@ -1,5 +1,7 @@
 # SVFEngine
 
+Details: https://github.com/safiar/SVFEngine/wiki
+
 Installing & using
 
 1. Download latest version from: https://github.com/safiar/SVFEngine.git
