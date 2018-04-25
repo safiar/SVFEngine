@@ -18,4 +18,5 @@ Installing & using
  - Run ..\SVFEngine\SVFEngine.sln
  - Choose x64 Debug or Release 
  - You may need to configure paths to APIs in project settings
+ - Move "TheGame" folder to root C disc as show: "C:\TheGame". It's a default game path.
  
