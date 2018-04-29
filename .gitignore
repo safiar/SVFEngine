@@ -1,0 +1,15 @@
+
+sh.exe.stackdump
+*.pdb
+*.ilk
+*.DMP
+*.obj
+*.tlog
+*.suo
+*.sdf
+SVFEngine/x64/Debug/*.*
+SVFEngine/x64/Debug/*/*.*
+SVFEngine/x64/Release/*.*
+SVFEngine/x64/Release/*/*.*
+SVFEngine/SVFEngine/x64/*.*
+SVFEngine/SVFEngine/x64/*/*.*
