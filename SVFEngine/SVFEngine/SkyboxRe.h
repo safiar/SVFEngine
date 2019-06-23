@@ -89,21 +89,17 @@ namespace SAVFGAME
 			PrepareSkybox(CLEAR_SKYBOX_RAM);
 		}
 
-		//>> Рендер скайбокса через вершинный и пискельный шейдеры
-		void ShowSkybox()
+	protected:
+		void ShowSkybox_proc(uint32 pass)
 		{
-			if (!isInit) PrepareSkybox(CLEAR_SKYBOX_RAM);
+			if (!pass)
+			{
+				dev->SendToRender(tdata, IDX_TEX_ENVCUBE);
+				dev->SendToRender(mdata, 0, sizeof(MODELVERTEX));
+			}
 
-			shader->State(SHADERSKYV, true);
-			shader->State(SHADERSKYP, true);
-
-			//d3ddev->SetTexture(shader->exdata[SHADER_PIXEL_SKYBOX].desc[VAR_SKYBOX_TEX_ID].RegisterIndex, tdata.texture); // shader var "SkyBoxTexture"
-
-			dev->SendToRender(tdata, IDX_TEX_ENVCUBE);
-			dev->SendToRender(mdata, 0, sizeof(MODELVERTEX));
-
-			dev->SetRenderState(RSTATE_CULLMODE,     _STATE_CULLMODE_NONE);
-			dev->SetRenderState(RSTATE_ZENABLE,      _STATE_ZENABLE_OFF);
+			dev->SetRenderState(RSTATE_CULLMODE, _STATE_CULLMODE_NONE);
+			dev->SetRenderState(RSTATE_ZENABLE, _STATE_ZENABLE_OFF);
 			dev->SetRenderState(RSTATE_ZWRITEENABLE, _STATE_OFF);
 
 			dev->DrawPrimitive(TIP_PRIM_TRIANGLELIST, 0, 0, mdata->num_vertices, 0, mdata->num_primitives);
@@ -111,9 +107,50 @@ namespace SAVFGAME
 			dev->PreviousRenderState(RSTATE_CULLMODE);
 			dev->PreviousRenderState(RSTATE_ZENABLE);
 			dev->PreviousRenderState(RSTATE_ZWRITEENABLE);
+		}
 
-			shader->State(SHADERSKYP, false);
-			shader->State(SHADERSKYV, false);
+	public:
+		//>> Рендер скайбокса через вершинный и пискельный шейдеры
+		void ShowSkybox()
+		{
+			if (!isInit) PrepareSkybox(CLEAR_SKYBOX_RAM);
+
+			const auto TEST_EFFECT = true;
+
+			if (TEST_EFFECT) {
+#define  SHADERSKYE  SHADER_EFFECT30_SKYBOX
+				shader->State(SHADERSKYE, true);
+
+				eShaderEffectTechID techID = shader->GetCurEFFTech(SHADERSKYE);
+				shader->SetEffectTechnique(SHADERSKYE, techID);
+			
+				uint32 numPasses = 0;
+				shader->EffectBegin(SHADERSKYE, &numPasses, NULL);
+
+				for (uint32 i = 0; i < numPasses; i++)
+				{
+					shader->EffectBeginPass(SHADERSKYE, i);
+
+					ShowSkybox_proc(i);
+
+					shader->EffectEndPass(SHADERSKYE);
+				}
+
+				shader->EffectEnd(SHADERSKYE);
+				shader->State(SHADERSKYE, false);
+#undef SHADERSKYE
+			}
+			else {
+				shader->State(SHADERSKYV, true);
+				shader->State(SHADERSKYP, true);
+
+				//d3ddev->SetTexture(shader->exdata[SHADER_PIXEL_SKYBOX].desc[VAR_SKYBOX_TEX_ID].RegisterIndex, tdata.texture); // shader var "SkyBoxTexture"
+
+				ShowSkybox_proc(NULL);
+
+				shader->State(SHADERSKYP, false);
+				shader->State(SHADERSKYV, false);
+			}
 
 			//IDirect3DSurface9 * face_p_x;
 			//IDirect3DSurface9 * back_buffer;

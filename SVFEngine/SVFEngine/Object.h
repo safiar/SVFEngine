@@ -118,9 +118,7 @@ namespace SAVFGAME
 		{
 			*pos = WPOS(position);
 		};
-		virtual ~CObject()
-		{
-		};
+		virtual ~CObject() { };
 		virtual void Close()
 		{
 			expos = nullptr;

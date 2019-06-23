@@ -36,11 +36,10 @@ namespace SAVFGAME
 		CInputManager& operator=(CInputManager&& src)		= delete;
 	public:
 		CInputManager() : rwindow(nullptr) { Close(); }
-		~CInputManager() { }
+		~CInputManager() { Close(); }
 		void Close()
 		{
 			rwindow = nullptr;
-			answers.clear();
 			Clear();
 		}
 		void Clear()
@@ -140,28 +139,28 @@ namespace SAVFGAME
 		//>> Запуск ответа на события клавиатуры
 		void EventKeyboard(const bool isKeyUp, const eKeyBoard& key, const wchar_t wchar)
 		{
-			for(auto answer = answers.begin(); answer != answers.end(); answer++)
+			for(auto answer : answers)
 			{
-				if (!(*answer)) { continue; } else
+				if (answer == nullptr) { continue; } else
 
 				if (!isKeyUp)														{
-					if ((*answer)->KeyPressed(KeyboardButton(wchar,key)) == true)
+					if (answer->KeyPressed(KeyboardButton(wchar,key)) == true)
 						return;														} else {
-					if ((*answer)->KeyReleased(KeyboardButton(wchar,key)) == true)
+					if (answer->KeyReleased(KeyboardButton(wchar,key)) == true)
 						return;														}
 			}
 		}
 		//>> Запуск ответа на событие клика мышью
 		void EventMouseClick(const bool isKeyUp, const eMouseButton& key)
 		{
-			for(auto answer = answers.begin(); answer != answers.end(); answer++)
+			for (auto answer : answers)
 			{
-				if (!(*answer)) { continue; } else
+				if (answer == nullptr) { continue; } else
 
 				if (!isKeyUp)																		{
-					if ((*answer)->MousePressed(MouseButton(key,mouse_x,mouse_y,rwindow)) == true)
+					if (answer->MousePressed(MouseButton(key,mouse_x,mouse_y,rwindow)) == true)
 						return;																		} else {
-					if ((*answer)->MouseReleased(MouseButton(key,mouse_x,mouse_y,rwindow)) == true)
+					if (answer->MouseReleased(MouseButton(key,mouse_x,mouse_y,rwindow)) == true)
 						return;																		}
 			}
 		}
@@ -171,11 +170,11 @@ namespace SAVFGAME
 			//if (mouse_wheel == wheel) return; else 
 			mouse_wheel = (char)wheel;
 
-			for(auto answer = answers.begin(); answer != answers.end(); answer++)
+			for (auto answer : answers)
 			{
-				if (!(*answer)) { continue; } else
+				if (answer == nullptr) { continue; } else
 			
-				if ((*answer)->MouseWheeled(MouseWheel(mouse_wheel,mouse_x,mouse_y,rwindow))==true)
+				if (answer->MouseWheeled(MouseWheel(mouse_wheel,mouse_x,mouse_y,rwindow))==true)
 					return;
 			}
 		}
@@ -193,11 +192,11 @@ namespace SAVFGAME
 			mouse_x = pos.x;
 			mouse_y = pos.y;
 
-			for(auto answer = answers.begin(); answer != answers.end(); answer++)
+			for (auto answer : answers)
 			{
-				if (!(*answer)) { continue; } else
+				if (answer == nullptr) { continue; } else
 			
-				if ((*answer)->MouseMoved(MousePos(mouse_x,mouse_y,rwindow))==true)
+				if (answer->MouseMoved(MousePos(mouse_x,mouse_y,rwindow))==true)
 					/*break;*/ return;
 			} //SetCenterCursor();
 		}

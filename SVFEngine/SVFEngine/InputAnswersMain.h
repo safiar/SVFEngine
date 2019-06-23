@@ -2,7 +2,7 @@
 //
 // MODULE  : InputAnswersMain.h
 //
-// PURPOSE : Обработка событий окна
+// PURPOSE : Обработка событий
 //
 // CREATED : SavF. ⚡ Savenkov Filipp A. (2017)
 //
@@ -22,12 +22,11 @@ namespace SAVFGAME
 	class CMainInputAnswers final : public CInputAnswers
 	{
 	protected:
-		CRenderT *	render;
-		CWorld *	world;
+		CWorld * world { nullptr } ;
 	private:
 	public:
 		CMainInputAnswers() : CInputAnswers() { };
-		~CMainInputAnswers(){};
+		~CMainInputAnswers() override final {};
 		bool KeyPressed(const KeyboardButton &arg)  override final
 		{
 			//wprintf(L"\nkey pressed: %c %4x (wchar) %2x (key)", arg.wchar, arg.wchar, arg.key);
@@ -77,10 +76,9 @@ namespace SAVFGAME
 			return true;
 		}
 		
-		void SetRender(const CRenderT * pRender)
+		void Init(const CWorld * pWorld)
 		{
-			render = const_cast<CRenderT*>(pRender);
-			world = & render->world;
+			world = (CWorld*) pWorld;
 		};
 	};
 }

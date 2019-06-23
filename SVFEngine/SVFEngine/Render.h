@@ -23,14 +23,21 @@ namespace SAVFGAME
 			int                 x, y;						// move cursor to x, y  [client window rectangle]
 			bool				centered_cursor   { false };
 			bool				show_cursor       { true  };
-		protected:
+		protected:		
+			bool				reset_render_call { false };
 			bool				reset_window_call { false };
+			bool                minimize_call     { false };
 			bool                move_cursor       { false };
 		public:
-			bool CursorMoveCheck()  { _RETBOOL(move_cursor);       }
-			bool WindowResetCheck() { _RETBOOL(reset_window_call); }
-			void WindowResetCall()  { reset_window_call = true;    }
-			void CursorMoveCall()   { move_cursor = true;          }
+			bool ResetRenderCheck()    { _RETBOOL(reset_render_call); }
+			bool CursorMoveCheck()     { _RETBOOL(move_cursor);       }
+			bool WindowMinimizeCheck() { _RETBOOL(minimize_call);     }
+			bool WindowResetCheck()    { _RETBOOL(reset_window_call); }
+			void ResetRenderCall()     { reset_render_call = true;    }
+			void WindowResetCall()     { reset_window_call = true;    }
+			void WindowMinimizeCall()  { minimize_call = true;        }
+			void CursorMoveCall()      { move_cursor = true;          }
+
 		};
 	public:
 		RenderToFramework	to_framework;

@@ -4,7 +4,7 @@
 #include "link_defines.h"
 
 #ifdef WINDOWS_IMM_WASAPI
-	#include "SoundIMM.h"
+	#include "SoundWAS.h"
     #define	CSoundF	CSoundWASAPI // Class Sound Final
 #endif
 

@@ -649,7 +649,7 @@ namespace SAVFGAME
 			}
 
 			if ((status.net.connected && status.net.loaded) || status.bot)
-				UpdatePlayerNamePos(self_camera);
+				UpdatePlayerNamePos(self_camera);			
 		}
 	};
 	class CPlayer : public CBasePlayer // класс игрока
@@ -845,8 +845,8 @@ namespace SAVFGAME
 
 			float t = sv_tick->GetInterpolation();
 
-			size_t count = player.size();
-			for (size_t i=0; i<count; i++)
+			uint64 count = player.size();
+			for (uint64 i=0; i<count; i++)
 				if (i != self_id)
 					 player[i]->Update(self_camera, t, false, server, client);
 				else self_p->Update(self_camera, t, true, server, client);

@@ -104,8 +104,11 @@ namespace SAVFGAME
 			vdecl_model = nullptr;
 			vdecl_font = nullptr;
 			vdecl_mem = nullptr;
+			for (auto & vs : vshader) vs = nullptr;
+			for (auto & ps : pshader) ps = nullptr;
+			for (auto & es : eshader) es = nullptr;
 		};
-		~CShaderDX9() { Close(); };
+		~CShaderDX9() override final { Close(); };
 
 		void Close() override final
 		{
@@ -135,6 +138,8 @@ namespace SAVFGAME
 			d3ddev = dev->d3ddev; // set up quick ptr
 			vs = (char*)D3DXGetVertexShaderProfile(d3ddev);
 			ps = (char*)D3DXGetPixelShaderProfile(d3ddev);
+			vs_u32 = dev->d3dcaps->VertexShaderVersion & 0xFFFF;
+			ps_u32 = dev->d3dcaps->PixelShaderVersion  & 0xFFFF;
 			return true;
 		};
 
@@ -179,13 +184,13 @@ namespace SAVFGAME
 
 	protected:
 		//>> Загрузка и компиляция шейдеров
-		void LoadProc(const SHADERSINFO info, uint32 ID, wchar_t* path)
+		void LoadProc(uint32 ID, wchar_t* path)
 		{
 			ID3DXBuffer * errors = nullptr;
 			ID3DXBuffer * shader = nullptr;
 			HRESULT result;
-			LPCSTR type;
-			bool compile_effect = FALSE;
+			const char * type;
+			bool compile_effect = false;
 
 			char compiler_msg[256];
 			_bstr_t filename(info.name[ID].c_str());
@@ -195,7 +200,7 @@ namespace SAVFGAME
 			{
 			case TYPE_VERTEX: type = vs; break;
 			case TYPE_PIXEL:  type = ps; break;
-			default: type = "none"; compile_effect = TRUE;
+			default: type = "none"; compile_effect = true;
 			}
 			
 			if (!compile_effect)
@@ -221,6 +226,18 @@ namespace SAVFGAME
 			}
 			else
 			{
+				switch (info.type[ID])
+				{
+				case TYPE_EFFECT50:
+					if (vs_u32 < 0x0500 && ps_u32 < 0x0500)
+					{
+						wprintf(L"\nEffect 5.0 [%s] not supported (vs=%04x,ps=%04x)",
+							info.name[ID].c_str(), vs_u32, ps_u32);
+						return;
+					}
+					break;
+				}
+
 				if (D3D_OK != D3DXCreateEffectFromFile(d3ddev,path,0,0,SCMPLSET,0,&eshader[ID],&errors))
 				{	            _MB (NULL, ERROR_ShaderCompile_F, ERROR_Warning,  ERROR_MB); 
 					if (errors) _MBS(NULL, errors,                compiler_msg,   ERROR_MB);  return;
@@ -228,6 +245,25 @@ namespace SAVFGAME
 				
 				pshader[ID] = nullptr;
 				vshader[ID] = nullptr;
+
+				info.tech.cur[ID] = MISSING;
+
+				byte EffectTechMAX = info.tech.max[ID];
+				for (byte i = AnyEffectTechMIN; i < EffectTechMAX; i++)
+				{
+					info.tech.p[ID][i] = eshader[ID]->GetTechniqueByName( info.tech.n[ID][i].c_str() );
+
+					if (D3D_OK == eshader[ID]->ValidateTechnique(info.tech.p[ID][i]))
+						 info.tech.valid[ID][i] = true;
+					else info.tech.valid[ID][i] = false;
+
+					// Первая доступная техника будет установлена текущей
+
+					if (info.tech.valid[ID][i])
+						info.tech.cur[ID] = i;
+
+					//eshader[ID]->FindNextValidTechnique
+				}
 			}
 
 			isInit[ID] = TRUE;
@@ -242,8 +278,8 @@ namespace SAVFGAME
 			if (dev == nullptr)         { _MBM(ERROR_PointerNone); return; }
 			if (refs_prepared == false) { _MBM(ERROR_InitNone);    return; }
 
-			wchar_t syspath[256], error[256], p1[256], p2[256];
-			GetCurrentDirectory(256,syspath);
+			wchar_t syspath[MAX_PATH], error[MAX_PATH * 2], p1[MAX_PATH], p2[MAX_PATH];
+			GetCurrentDirectory(MAX_PATH, syspath);
 
 			for(uint32 i=SHADER_DX9_START+1; i<SHADER_DX9_END; i++) if (!isInit[i])
 			{
@@ -254,7 +290,7 @@ namespace SAVFGAME
 				wsprintf(p2,L"%s\\%s\\%s",syspath,DIRECTORY_SHADERS,info.name[i].c_str());
 				
 				//if (p = LoadFileCheck(2, p1, p2)) LoadShadersProc(info, i, p);
-				if (p = LoadFileCheck64((int64)p1, (int64)p2)) LoadProc(info, i, p);
+				if (p = LoadFileCheck64((int64)p1, (int64)p2)) LoadProc(i, p);
 				else _MBM(error);
 			}
 		}
@@ -332,9 +368,9 @@ namespace SAVFGAME
 			
 			switch(nameID)
 			{
+			case SHADER_EFFECT30_SKYBOX: SkyboxProc(nameID); break;
 			case SHADER_VERTEX_SKYBOX:   SkyboxProc(nameID); break;
 			case SHADER_PIXEL_SKYBOX:    SkyboxProc(nameID); break;
-		//	case SHADER_EFFECT30_SKYBOX: SkyboxProc(nameID); break;
 		//	case SHADER_VERTEX_LIGHT:    LightProc(nameID); break;
 		//	case SHADER_PIXEL_LIGHT:     LightProc(nameID); break;
 			case SHADER_VERTEX_N_LIGHT:  LightProc(nameID); break;
@@ -357,16 +393,24 @@ namespace SAVFGAME
 
 			switch(ID)
 			{	////////////////////////////////////////////////////////////////////////////////////////////////
-				case SHADER_VERTEX_SKYBOX:
+				case SHADER_EFFECT30_SKYBOX:
 					if (isEnabled[ID])			// ON skybox vertex shader
 					{
+						const UINT V0 = CONST_MAT_WORLD;
+						const UINT V1 = CONST_MAT_VIEWPROJ;
+						const UINT V2 = CONST_VEC_CAMERA;
+						const UINT VL = V2;					// VAR last
+
 						SetVertexDecl(VDECL_MODELLIGHT);
 
 						if (!indata[ID].have_handles) // только для первого вызова
 						{
-							indata[ID].handle[0] = table[ID]->GetConstantByName(0,"World");
-							indata[ID].handle[1] = table[ID]->GetConstantByName(0,"ViewProj");
-							indata[ID].handle[2] = table[ID]->GetConstantByName(0,"CameraPosition");
+							indata[ID].handle[V0] = eshader[ID]->GetParameterByName(NULL, "World");
+							indata[ID].handle[V1] = eshader[ID]->GetParameterByName(NULL, "ViewProj");
+							indata[ID].handle[V2] = eshader[ID]->GetParameterByName(NULL, "CameraPosition");
+							//indata[ID].handle[V0] = table[ID]->GetConstantByName(NULL, "World");
+							//indata[ID].handle[V1] = table[ID]->GetConstantByName(NULL, "ViewProj");
+							//indata[ID].handle[V2] = table[ID]->GetConstantByName(0, "CameraPosition");
 							indata[ID].have_handles = true;
 						}
 
@@ -374,9 +418,41 @@ namespace SAVFGAME
 						//MathTranslateMatrix(*posCamera, matWorld);
 						MATH_TRANSLATE_MATRIX(posCamera->x, posCamera->y, posCamera->z)
 
-						if (D3D_OK != table[ID]->SetFloatArray(d3ddev, indata[ID].handle[0], MT,                 16))  _MBM(SKYERR0);
-						if (D3D_OK != table[ID]->SetFloatArray(d3ddev, indata[ID].handle[1], FCAST(matViewProj), 16))  _MBM(SKYERR1);
-						if (D3D_OK != table[ID]->SetFloatArray(d3ddev, indata[ID].handle[2], FCAST(posCamera),    3))  _MBM(SKYERR2);
+						if (D3D_OK != eshader[ID]->SetFloatArray(indata[ID].handle[V0], MT,                 16))  _MBM(SKYERR0);
+						if (D3D_OK != eshader[ID]->SetFloatArray(indata[ID].handle[V1], FCAST(matViewProj), 16))  _MBM(SKYERR1);
+						if (D3D_OK != eshader[ID]->SetFloatArray(indata[ID].handle[V2], FCAST(posCamera),    3))  _MBM(SKYERR2);
+					}
+					else
+					{
+						RestoreVertexDecl();
+					}
+					break;
+				////////////////////////////////////////////////////////////////////////////////////////////////
+				case SHADER_VERTEX_SKYBOX:
+					if (isEnabled[ID])			// ON skybox vertex shader
+					{
+						const UINT V0 = CONST_MAT_WORLD;
+						const UINT V1 = CONST_MAT_VIEWPROJ;
+						const UINT V2 = CONST_VEC_CAMERA;
+						const UINT VL = V2;					// VAR last
+
+						SetVertexDecl(VDECL_MODELLIGHT);
+
+						if (!indata[ID].have_handles) // только для первого вызова
+						{
+							indata[ID].handle[V0] = table[ID]->GetConstantByName(NULL, "World");
+							indata[ID].handle[V1] = table[ID]->GetConstantByName(NULL, "ViewProj");
+							indata[ID].handle[V2] = table[ID]->GetConstantByName(0, "CameraPosition");
+							indata[ID].have_handles = true;
+						}
+
+						//MATH3DMATRIX matWorld;
+						//MathTranslateMatrix(*posCamera, matWorld);
+						MATH_TRANSLATE_MATRIX(posCamera->x, posCamera->y, posCamera->z)
+
+						if (D3D_OK != table[ID]->SetFloatArray(d3ddev, indata[ID].handle[V0], MT,                 16))  _MBM(SKYERR0);
+						if (D3D_OK != table[ID]->SetFloatArray(d3ddev, indata[ID].handle[V1], FCAST(matViewProj), 16))  _MBM(SKYERR1);
+						if (D3D_OK != table[ID]->SetFloatArray(d3ddev, indata[ID].handle[V2], FCAST(posCamera),    3))  _MBM(SKYERR2);
 					}
 					else						// OFF skybox vertex shader
 					{
@@ -723,12 +799,12 @@ namespace SAVFGAME
 	public: // в .cpp части
 		HRESULT OnLostDevice()  override final;	// вызов перед d3ddev->Reset()
 		HRESULT OnResetDevice() override final; // вызов после d3ddev->Reset()
-		HRESULT SetEffectTexture(eShaderID ID, SHADER_HANDLE handle, IDirect3DBaseTexture9 * texture);
-		HRESULT SetEffectTechnique(eShaderID ID, SHADER_HANDLE handle);
-		HRESULT EffectBegin(eShaderID ID, uint32 * pPasses, DWORD flags);
-		HRESULT EffectBeginPass(eShaderID ID, uint32 pass);
-		HRESULT EffectEndPass(eShaderID ID);
-		HRESULT EffectEnd(eShaderID ID);
+		HRESULT SetEffectTexture(eShaderID ID, SHADER_HANDLE handle, void * p_texture)                 override final;
+		HRESULT SetEffectTechnique(eShaderID ID, eShaderEffectTechID techID)                           override final;
+		HRESULT EffectBegin(eShaderID ID, uint32 * pPasses, uint32 flags)                              override final;
+		HRESULT EffectBeginPass(eShaderID ID, uint32 pass)                                             override final;
+		HRESULT EffectEndPass(eShaderID ID)                                                            override final;
+		HRESULT EffectEnd(eShaderID ID)                                                                override final;
 		HRESULT SetMatrix(eShaderID ID, SHADER_HANDLE handle, MATH3DMATRIX * pMatrix)                  override final;
 		HRESULT SetMatrixTranspose(eShaderID ID, SHADER_HANDLE handle, MATH3DMATRIX * pMatrix)         override final;
 		HRESULT SetRaw(eShaderID ID, SHADER_HANDLE handle, void * pData, uint32 bytes)                 override final;

@@ -60,21 +60,26 @@ namespace SAVFGAME
 	}
 
 	//>> Установка текстуры эффекта
-	HRESULT CShaderDX9::SetEffectTexture(eShaderID ID, SHADER_HANDLE handle, IDirect3DBaseTexture9 * texture)
+	HRESULT CShaderDX9::SetEffectTexture(eShaderID ID, SHADER_HANDLE handle, void * p_texture)
 	{
-		CShaderDX9Check
-		return eshader[ID]->SetTexture(handle,texture);
+		CShaderDX9Check	
+		return eshader[ID]->SetTexture(handle, (IDirect3DBaseTexture9*) p_texture);
 	}
 
 	//>> Установка техники эффекта
-	HRESULT CShaderDX9::SetEffectTechnique(eShaderID ID, SHADER_HANDLE handle)
+	HRESULT CShaderDX9::SetEffectTechnique(eShaderID ID, eShaderEffectTechID techID)
 	{
 		CShaderDX9Check
-		return eshader[ID]->SetTechnique(handle);
+		if (__ISMISS(info.tech.cur[ID]))
+		{
+			_MBM(ERROR_ShaderEffTchMiss);
+			return D3DERR_INVALIDCALL;
+		}
+		return eshader[ID]->SetTechnique( info.tech.p[ID][techID] );
 	}
 
 	//>> Начать эффект
-	HRESULT CShaderDX9::EffectBegin(eShaderID ID, uint32 * pPasses, DWORD flags)
+	HRESULT CShaderDX9::EffectBegin(eShaderID ID, uint32 * pPasses, uint32 flags)
 	{
 		return eshader[ID]->Begin(pPasses,flags);
 	}

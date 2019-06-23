@@ -33,18 +33,17 @@ struct D3DXVECTOR4; // DX9
 	#define DWORD unsigned long
 #endif
 
-#ifndef max
-	#define max(a,b)            (((a) > (b)) ? (a) : (b))
-#endif
-
-#ifndef min
-	#define min(a,b)            (((a) < (b)) ? (a) : (b))
-#endif
-
 typedef double Int3D;
 
-#define MathPI				((float)  3.141592654f) //3.14159265358979323846
-#define MathPI2				((float)  6.283185307f) //6.28318530717958647692
+#define ANGLES_ISTEP		100    //   1 /  STEP
+#define ANGLES_NUM			36000  // 360 * ISTEP
+#define ANGLES_STEP			0.01f  //   1 / ISTEP
+
+#define MathPI				3.141592654f // 3.14159265358979323846
+#define MathPI2				6.283185307f // 6.28318530717958647692
+#define MathSqrt2           1.414213538f // sqrt(2) == 1.4142135623730950488016887242097
+#define MathSqrt2inv		0.707106769f // 1 / sqrt(2) == 0.70710678118654752440
+
 #define TORADIANS(x)		(x*(MathPI/180.0f))
 #define TODEGREES(x)		(x*(180.0f/MathPI))
 
@@ -125,19 +124,21 @@ typedef double Int3D;
 										MRz *= MRx;				 \
 										MRz *= MRy;			
 
+//#define _INVSQRT(x)   1 / sqrt(x)
+#define _INVSQRT(x)   InvSqrt(x)
+
 ///////////////////////////////////////////////////////////////
 
 namespace SAVFGAME
 {
 	class CTAB // Таблицы констант для быстрого вызова
 	{
-		static float* sinAngleTab;
-		static float* cosAngleTab;
-		static float* tanAngleTab;
+	private:
+		static float sinAngleTab [ANGLES_NUM];
+		static float cosAngleTab [ANGLES_NUM];
+		static float tanAngleTab [ANGLES_NUM];
+		static bool isInit;
 	public:	
-		CTAB() {}
-		~CTAB() { Close(); }
-		static void Close();
 		static void Init();
 		static float sinA(float);
 		static float cosA(float);
@@ -145,8 +146,22 @@ namespace SAVFGAME
 		static float sinR(float);
 		static float cosR(float);
 		static float tanR(float);
+	private:
+		virtual void __DO_NOT_CREATE_OBJECT_OF_THIS_CLASS() = 0;
 	};
 	
+	// out_f = 1 / sqrt(in_f)
+	inline float __fastcall InvSqrt(float in_f)
+	{
+		#define __ONE__ ((uint32)(0x3F800000))
+
+		uint32 tmp = ((__ONE__ << 1) + __ONE__ - *(uint32*)& in_f) >> 1;
+		float  f = *(float*) & tmp;
+		return f * (1.47f - 0.47f * in_f * f * f);
+
+		#undef __ONE__
+	}
+
 	struct MATH3DMATRIX {
 		MATH3DMATRIX(): _11(1),  _12(0),  _13(0),  _14(0),
 						_21(0),  _22(1),  _23(0),  _24(0),
@@ -508,7 +523,7 @@ namespace SAVFGAME
 		void _normalize()
 		{
 			float norm = x*x + y*y + z*z;	if (!norm) return;
-			float mod = 1/sqrt(norm);
+			float mod = _INVSQRT(norm);
 			x *= mod;
 			y *= mod;
 			z *= mod;
@@ -520,7 +535,7 @@ namespace SAVFGAME
 			if ( norm > (1.000f + PRECISION) ||
 				 norm < (1.000f - PRECISION) )
 			{
-				float mod = 1/sqrt(norm);
+				float mod = _INVSQRT(norm);
 				x *= mod;
 				y *= mod;
 				z *= mod;
@@ -617,7 +632,7 @@ namespace SAVFGAME
 		void _normalize()
 		{
 			float norm = x*x + y*y + z*z + w*w;		if (!norm) return;
-			float mod = 1 / sqrt(norm);
+			float mod = _INVSQRT(norm);
 			x *= mod;
 			y *= mod;
 			z *= mod;
@@ -630,7 +645,7 @@ namespace SAVFGAME
 			if (norm > (1.000f + PRECISION) ||
 				norm < (1.000f - PRECISION))
 			{
-				float mod = 1 / sqrt(norm);
+				float mod = _INVSQRT(norm);
 				x *= mod;
 				y *= mod;
 				z *= mod;
@@ -671,7 +686,7 @@ namespace SAVFGAME
 		void _normalize()
 		{
 			float norm = x*x + y*y;				if (!norm) return;
-			float mod = 1 / sqrt(norm);
+			float mod = _INVSQRT(norm);
 			x *= mod;
 			y *= mod;
 		}
@@ -682,7 +697,7 @@ namespace SAVFGAME
 			if (norm > (1.000f + PRECISION) ||
 				norm < (1.000f - PRECISION))
 			{
-				float mod = 1 / sqrt(norm);
+				float mod = _INVSQRT(norm);
 				x *= mod;
 				y *= mod;
 			}
@@ -728,13 +743,14 @@ namespace SAVFGAME
 		};
 		void _normalize()
 		{
-			float norm = sqrt(a*a + b*b + c*c);		
+			float norm = a*a + b*b + c*c;		
 			if (norm)
 			{
-				a = a / norm;
-				b = b / norm;
-				c = c / norm;
-				d = d / norm;
+				float mod = _INVSQRT(norm);
+				a *= mod;
+				b *= mod;
+				c *= mod;
+				d *= mod;
 				N.x = a;
 				N.y = b;
 				N.z = c;
@@ -1017,7 +1033,7 @@ namespace SAVFGAME
 			trace = M._11 + M._22 + M._33 + 1.0f;
 			if (trace > 1.0f)
 			{
-				s  = 2.0f * sqrt(trace);
+				s  = 2.0f * sqrt(trace);  
 				s_ = 1 / s;
 				x  = (M._23 - M._32) * s_;
 				y  = (M._31 - M._13) * s_;
@@ -1175,7 +1191,7 @@ namespace SAVFGAME
 		void _normalize()
 		{
 			float norm = x*x + y*y + z*z + w*w;		if (!norm) return;
-			float mod  = 1/sqrt(norm);
+			float mod = _INVSQRT(norm);
 			x *= mod;
 			y *= mod;
 			z *= mod;
@@ -1188,7 +1204,7 @@ namespace SAVFGAME
 			if ( norm > (1.000f + PRECISION) ||
 				 norm < (1.000f - PRECISION) )
 			{
-				float mod = 1/sqrt(norm);
+				float mod = _INVSQRT(norm);
 				x *= mod;
 				y *= mod;
 				z *= mod;
@@ -1209,7 +1225,7 @@ namespace SAVFGAME
 				norm < (1.000f - PRECISION))
 			{
 				if (!norm) return;
-				float mod = 1 / sqrt(norm);
+				float mod = _INVSQRT(norm);
 				x *= -mod;
 				y *= -mod;
 				z *= -mod;
@@ -1414,7 +1430,7 @@ namespace SAVFGAME
 		float m, l = vec.x*vec.x + vec.y*vec.y + vec.z*vec.z;
 
 		if (!l) m = 1;
-		else    m = 1 / sqrt(l);
+		else    m = _INVSQRT(l);
 
 		return MATH3DVEC(vec.x * m, vec.y * m, vec.z * m);
 	};
@@ -1618,7 +1634,7 @@ namespace SAVFGAME
 		float val = sqrt(Q.x*Q.x + Q.y*Q.y + Q.z*Q.z);
 		if (val >= PRECISION)
 		{
-			float val_ = 1.0f / val;		// TODO: оптимизировать atan2() через CTAB::atan2()
+			float val_ = 1.0f / val;		// TODO: оптимизировать atan2()
 			axis.x = Q.x * val_;
 			axis.y = Q.y * val_;
 			axis.z = Q.z * val_;

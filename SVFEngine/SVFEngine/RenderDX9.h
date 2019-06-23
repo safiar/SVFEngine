@@ -29,11 +29,11 @@ namespace SAVFGAME
 	{
 	private:
 		DEV3DDAT				_;
-	protected:	
-		IDirectT *				d3d;
-		IDeviceT *				d3ddev;	// copy [dev->d3ddev]
-		D3DPARAM				d3dpp;
-		DEV3DDAT *				dev;	// manage d3ddev & d3dcaps
+	protected:
+		D3DPARAM				d3dpp;				// 
+		IDirectT *				d3d    { nullptr };	// 
+		IDeviceT *				d3ddev { nullptr };	// copy [dev->d3ddev]	
+		DEV3DDAT * const		dev    { &_ };		// manage d3ddev & d3dcaps
 	public:
 		CWorld					world;
 	public:
@@ -42,8 +42,8 @@ namespace SAVFGAME
 		CGameRenderDX9& operator=(CGameRenderDX9&& src)			= delete;
 		CGameRenderDX9& operator=(const CGameRenderDX9& src)	= delete;
 	public:
-		CGameRenderDX9() : CRender(), d3d(nullptr), d3ddev(nullptr) { dev = & _; };
-		~CGameRenderDX9() { Close(); };
+		CGameRenderDX9() : CRender() { };
+		~CGameRenderDX9() override final { Close(); };
 
 		//>> 
 		bool Init(const HWND hWnd, const CStatusWindow * pState) override final
@@ -61,7 +61,7 @@ namespace SAVFGAME
 			if (!(d3d = Direct3DCreate9(D3D_SDK_VERSION)))	// get interface
 				{ _MBM(ERROR_InitDirect3D); return false; }
 
-			UINT		adapter		= D3DADAPTER_DEFAULT;	// using default (using Windows now) videocard
+			UINT		adapter		= D3DADAPTER_DEFAULT;	// using default (using Windows now)
 			D3DDEVTYPE	deviceType	= D3DDEVTYPE_HAL;		// using hardware (not CPU software)
 
 			dev->Init(d3d, adapter, deviceType);
@@ -82,13 +82,13 @@ namespace SAVFGAME
 			{
 				d3dpp.Windowed = false;
 				//d3dpp.MultiSampleQuality = dev->GetSamplesFullscreen(true);					// antialiasing
-				d3dpp.MultiSampleType = (D3DMULTISAMPLE_TYPE)dev->GetSamplesFullscreen(true);	// antialiasing
+				d3dpp.MultiSampleType = (D3DMULTISAMPLE_TYPE) dev->GetSamplesFullscreen(true);	// antialiasing
 			}
 			else
 			{
 				d3dpp.Windowed = true;
 				//d3dpp.MultiSampleQuality = dev->GetSamplesWindowed(true);						// antialiasing
-				d3dpp.MultiSampleType = (D3DMULTISAMPLE_TYPE)dev->GetSamplesWindowed(true);		// antialiasing
+				d3dpp.MultiSampleType = (D3DMULTISAMPLE_TYPE) dev->GetSamplesWindowed(true);	// antialiasing
 			}
 
 			// CHECK THIS INFO ( ? )
@@ -99,7 +99,7 @@ namespace SAVFGAME
 			d3dpp.PresentationInterval = dev->GetPresentationInterval(); // VSync
 			d3dpp.Flags = 0;
 			
-			d3dpp.BackBufferFormat = (D3DFORMAT)dev->GetDisplay().format;
+			d3dpp.BackBufferFormat = (D3DFORMAT) dev->GetDisplay().format;
 
 			if (mode == WM_FULLSCREEN) d3dpp.FullScreen_RefreshRateInHz = dev->GetDisplay().refreshRate;
 			else					   d3dpp.FullScreen_RefreshRateInHz = 0;
@@ -108,8 +108,8 @@ namespace SAVFGAME
 			d3dpp.BackBufferHeight = height;
 			d3dpp.BackBufferCount  = dev->GetBackBuffersNum();
 
-			d3dpp.EnableAutoDepthStencil = TRUE;			// z-buffer   буфер глубины (Depth) и трафарета (Stencil)
-			d3dpp.AutoDepthStencilFormat = D3DFMT_D24S8;	// z-buffer   24 буфера глубины + 8 буфера трафарета      D3DFMT_D15S1  D3DFMT_D24X4S4  D3DFMT_D24X8
+			d3dpp.EnableAutoDepthStencil =             dev->GetDisplay().dstencil.enableAuto;
+			d3dpp.AutoDepthStencilFormat = (D3DFORMAT) dev->GetDisplay().dstencil.format;
 
 			// create a device class using this information and information from the d3dpp struct
 
@@ -251,7 +251,19 @@ namespace SAVFGAME
 			{
 			case D3D_OK: break;
 			case D3DERR_INVALIDCALL: _MBM(ERROR_ResetDeviceINV); return false;
-			default:                 _MBM(ERROR_ResetDevice);    return false;
+			default:                // _MBM(ERROR_ResetDevice);    return false;
+				{
+					for (uint64 i=1;;i++)
+					{
+						_SLEEP(1000);
+						if (d3ddev->Reset(&d3dpp) == D3D_OK)
+							break;
+						else
+						{
+							if (!(i % 15)) printf("\nRENDER : Can't reset D3D device! (%i sec.)", i);
+						}
+					}
+				}
 			};
 
 			//dev->SetViewPort(0, 0, rwm.GetClientWidth(), rwm.GetClientHeight(), 0, 1);
@@ -273,7 +285,7 @@ namespace SAVFGAME
 		//>> 
 		bool Run() override final
 		{
-			d3ddev->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, D3DCOLOR_ARGB(0,0,0,0), 1.0f, 0);
+			d3ddev->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
 			d3ddev->BeginScene();
 
 			//d3ddev->SetCursorPosition(width/2, height/2, D3DCURSOR_IMMEDIATE_UPDATE);
@@ -282,7 +294,11 @@ namespace SAVFGAME
 			world.Run();
 
 			d3ddev->EndScene();
-			d3ddev->Present(NULL, NULL, NULL, NULL);
+			if (d3ddev->Present(NULL, NULL, NULL, NULL) != D3D_OK)
+			{
+				// LOST DEVICE (например, при ctrl+alt+del)
+				to_framework.ResetRenderCall();
+			}
 
 			////////////////////////////////////////////// Update : world -> render -> framework
 
@@ -300,6 +316,9 @@ namespace SAVFGAME
 
 			if (world.to_render.WindowResetCheck())
 				to_framework.WindowResetCall();
+
+			if (world.to_render.WindowMinimizeCheck())
+				to_framework.WindowMinimizeCall();
 
 			return true;
 		};

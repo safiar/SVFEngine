@@ -21,7 +21,9 @@ namespace SAVFGAME
 		WM_WINDOWED   = 0,
 		WM_FULLWINDOW = 1,
 		WM_FULLSCREEN = 2,
-		WM_NOBORDERS  = 3
+		WM_NOBORDERS  = 3,
+
+	//	WM_MINIMIZED  = 4,
 	};
 
 	enum eMouseResets
@@ -43,7 +45,7 @@ namespace SAVFGAME
 		bool lb        { 0 }; // left   button
 		bool show      { 1 }; // state of showing
 		bool center    { 0 }; // state of centering
-		//>> Сброс в состояние по умолчанию
+
 		void Reset()
 		{
 			ResetPosition();
@@ -90,8 +92,11 @@ namespace SAVFGAME
 		}
 	};
 
+	class CWindowMain;
 	struct CStatusWindow
 	{
+		THOLDER <HWND, CWindowMain>	hwnd; // shared copy of window handler ; original manipulated located at struct WInfo
+
 		int  sys_width          { 800 };
 		int  sys_height         { 600 };
 		int  client_width       { 800 };
@@ -108,7 +113,7 @@ namespace SAVFGAME
 		int	 desktop_vertical   { 600 };
 		eWindowMode	mode        { WM_WINDOWED };	
 		bool Updated            { 0 };  // окно меняется редко, отметим факт изменения отдельно
-		//>> Сброс в состояние по умолчанию
+		//>> Сброс в состояние по умолчанию		
 		void Reset()
 		{
 			sys_width     = 800;

@@ -30,7 +30,7 @@ namespace SAVFGAME
 		DataManagerModel *				mdata     { nullptr }; // текущий текст на показ
 	protected:
 		VECDATAP <DataManagerModel>		cmdata;				// набор постоянных текстов
-		int64							font_ct_iterator;	// итератор сброса cmdata :: значение MISSING (-1) зарезервировано
+		int64							font_ct_iterator;	// счетчик сброса cmdata :: значение MISSING (-1) зарезервировано
 	private:
 	public:
 		CFontR() : CBaseFont(), font_ct_iterator(0) {};

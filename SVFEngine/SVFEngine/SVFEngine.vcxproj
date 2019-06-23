@@ -164,9 +164,12 @@ call "$(SolutionDir)increment_version_build.bat"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="exceptions.cpp" />
+    <ClCompile Include="system.cpp" />
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="helper.cpp" />
     <ClCompile Include="mathematics.cpp" />
+    <ClCompile Include="mp3.cpp" />
     <ClCompile Include="ShaderDX9.cpp" />
     <ClCompile Include="WindowMain.cpp" />
     <ClCompile Include="WindowProc.cpp" />
@@ -174,7 +177,11 @@ call "$(SolutionDir)increment_version_build.bat"</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Clipboard.h" />
     <ClInclude Include="color.h" />
+    <ClInclude Include="defines_core.h" />
+    <ClInclude Include="exceptions.h" />
+    <ClInclude Include="system.h" />
     <ClInclude Include="defines.h" />
     <ClInclude Include="device3d.h" />
     <ClInclude Include="device3d11.h" />
@@ -202,22 +209,18 @@ call "$(SolutionDir)increment_version_build.bat"</Command>
     <ClInclude Include="Model.h" />
     <ClInclude Include="ModelRe.h" />
     <ClInclude Include="ModelPre.h" />
+    <ClInclude Include="mp3.h" />
+    <ClInclude Include="mp3h.h" />
+    <ClInclude Include="mp3hf.h" />
     <ClInclude Include="Network.h" />
     <ClInclude Include="NetworkClient.h" />
     <ClInclude Include="NetworkGD.h" />
     <ClInclude Include="NetworkServer.h" />
-    <ClInclude Include="NetworkWS2_testtcp.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClInclude>
     <ClInclude Include="NetworkWS2.h" />
-    <ClInclude Include="NetworkWS2_testchat.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClInclude>
     <ClInclude Include="Object.h" />
     <ClInclude Include="Interact.h" />
     <ClInclude Include="Particles.h" />
+    <ClInclude Include="pcm.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Render.h" />
     <ClInclude Include="RenderDX11.h" />
@@ -231,17 +234,26 @@ call "$(SolutionDir)increment_version_build.bat"</Command>
     <ClInclude Include="Skybox.h" />
     <ClInclude Include="SkyboxRe.h" />
     <ClInclude Include="Sound.h" />
+    <ClInclude Include="SoundDevice.h" />
     <ClInclude Include="SoundIMM.h" />
+    <ClInclude Include="SoundIMMN.h" />
+    <ClInclude Include="SoundWAS.h" />
     <ClInclude Include="Sprite.h" />
     <ClInclude Include="StatusIO.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="SystemBase.h" />
+    <ClInclude Include="SystemWin.h" />
     <ClInclude Include="Terrain.h" />
     <ClInclude Include="TexProfile.h" />
     <ClInclude Include="TexProfileRe.h" />
+    <ClInclude Include="thread.h" />
     <ClInclude Include="title.h" />
+    <ClInclude Include="types.h" />
     <ClInclude Include="UI.h" />
+    <ClInclude Include="vecdata.h" />
     <ClInclude Include="version.h" />
     <ClInclude Include="version_build.h" />
+    <ClInclude Include="version_conv.h" />
     <ClInclude Include="version_major.h" />
     <ClInclude Include="version_minor.h" />
     <ClInclude Include="version_s.h" />
@@ -251,6 +263,7 @@ call "$(SolutionDir)increment_version_build.bat"</Command>
     <ClInclude Include="WindowMain.h" />
     <ClInclude Include="WindowProc.h" />
     <ClInclude Include="World.h" />
+    <ClInclude Include="xxx_test.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Version.rc" />

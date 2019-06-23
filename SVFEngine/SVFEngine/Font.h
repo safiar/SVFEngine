@@ -395,8 +395,8 @@ namespace SAVFGAME
 			if (shader == nullptr)  { _MBM(ERROR_PointerNone);  return false; }
 			if (IO == nullptr)      { _MBM(ERROR_PointerNone);  return false; }
 
-			wchar_t syspath[256], error[256], p1[256], p2[256];
-			GetCurrentDirectory(256, syspath);
+			wchar_t syspath[MAX_PATH], error[MAX_PATH * 2], p1[MAX_PATH], p2[MAX_PATH];
+			GetCurrentDirectory(MAX_PATH, syspath);
 			wsprintf(error, L"%s %s", ERROR_FntLoadFailed, fntName);
 			wsprintf(p1, L"%s\\%s", gamePath, DIRECTORY_FONTS);
 			wsprintf(p2, L"%s\\%s", syspath, DIRECTORY_FONTS);

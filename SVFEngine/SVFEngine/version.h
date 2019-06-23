@@ -16,8 +16,8 @@
 #include "version_revision.h"
 #include "version_build.h"
 
-#define TOSTRING_(s) #s
-#define TOSTRING(s) TOSTRING_(s)
+#include "version_conv.h"
+
 
 #define PRODUCT_VERSION			VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_BUILD
 #define PRODUCT_VERSION_STR		    TOSTRING(VERSION_MAJOR)    \
