@@ -1,6 +1,6 @@
 # SVFEngine
 
-Details: https://github.com/safiar/SVFEngine/wiki
+Authors' details: https://github.com/safiar/SVFEngine/wiki
 
 Installing & using
 
@@ -16,7 +16,7 @@ Installing & using
    - Windows DirectX SDK
    - Windows Sockets 2 (WINSOCK2 API)
    - Windows Audio Session API (WASAPI)
-   - Visual Studio 2013
+   - Visual Studio 2013 or later
  - Run ..\SVFEngine\SVFEngine.sln
  - Choose x64 Debug or Release 
  - You may need to configure paths to APIs in project settings
