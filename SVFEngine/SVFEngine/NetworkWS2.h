@@ -168,7 +168,7 @@ namespace SAVFGAME
 		CNetworkWS2() : CNetwork(), isInit(false), isConnected(false), isServered(false),
 			cl_socket(INVALID_SOCKET), sv_socket(INVALID_SOCKET)
 		               { Init();  };
-		~CNetworkWS2() { Close(); };
+		~CNetworkWS2() override final { Close(); };
 
 		void Close() override final
 		{

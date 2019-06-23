@@ -53,6 +53,14 @@ namespace SAVFGAME
 
 		EKE_HELP_SHOW_STATUS, // default : H
 
+		EKE_CLIPBOARD_CTRL,	// default : [ctrl + c/v] copy-paste /clipboard/
+		EKE_CLIPBOARD_V,	// default : [ctrl + c/v] copy-paste /clipboard/
+		EKE_CLIPBOARD_C,	// default : [ctrl + c/v] copy-paste /clipboard/
+
+		EKE_SYSTEM_CTRL,    // ctrl + alt + del combo
+		EKE_SYSTEM_ALT,     // ctrl + alt + del combo
+		EKE_SYSTEM_DELETE,  // ctrl + alt + del combo
+
 		EKE_ENUM_MAX
 	};
 
@@ -116,6 +124,10 @@ namespace SAVFGAME
 			ev[EKE_CHAT_MENU_DELETE_CHAR].key = eKeyBoard::K_BACKSPACE;
 
 			ev[EKE_HELP_SHOW_STATUS].key = eKeyBoard::K_H;
+
+			ev[EKE_CLIPBOARD_CTRL].key = eKeyBoard::K_CTRL;
+			ev[EKE_CLIPBOARD_V].key    = eKeyBoard::K_V;
+			ev[EKE_CLIPBOARD_C].key    = eKeyBoard::K_C;
 		}
 	};
 }

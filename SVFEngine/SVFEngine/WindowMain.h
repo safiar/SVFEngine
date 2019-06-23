@@ -68,7 +68,7 @@ namespace SAVFGAME
 				wInfo.resize = false;
 			}
 		};
-		~CWindowMain()
+		virtual ~CWindowMain()
 		{
 			Close();
 		};
@@ -83,6 +83,7 @@ namespace SAVFGAME
 					{ _MBM(ERROR_WINDOW); return false; }
 
 				wInfo.hWnd = nullptr;
+				wInfo.state->hwnd.Set(nullptr); // reset shared copy of window handler
 			}
 
 			DropWindowProc(); // unbind proc
@@ -134,6 +135,8 @@ namespace SAVFGAME
 							wInfo.wc.hInstance,
 							wInfo.lpParam)))
 				{ _MBM(ERROR_WINDOW); return false; }
+
+			wInfo.state->hwnd.Set(wInfo.hWnd); // set up shared copy of window handler
 
 			if (wInfo.dwStyle == GAMEFULLSCREEN)
 			{

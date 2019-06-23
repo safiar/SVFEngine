@@ -70,14 +70,12 @@ namespace SAVFGAME
 		CSprite& operator=(CSprite&& src)		= delete;
 		CSprite& operator=(const CSprite& src)	= delete;
 	public:
-		CSprite() : UIP(UID.pos), pos(CObject::pos)
+		CSprite() : CObject(), UIP(UID.pos), pos(CObject::pos)
 		{
 			Close();
 		};
-		~CSprite()
-		{
-		};
-		void Close()
+		~CSprite() override final { };
+		void Close() override final
 		{
 			profile      = nullptr;
 			profile_shr  = nullptr;
@@ -469,7 +467,8 @@ namespace SAVFGAME
 		//>> Рендер спрайта
 		void Show()
 		{
-			if (!isInit) { _MBM(ERROR_InitNone); return; }
+			if (!isInit) { //_MBM(ERROR_InitNone);
+			               return; }
 
 			if (count == 0) return;
 
@@ -480,8 +479,8 @@ namespace SAVFGAME
 				case eBillboardType::EBT_Y:    pos->Q = *camera_RY;     break;
 				case eBillboardType::EBT_XY:   pos->Q = *camera_RXY;    break;
 				case eBillboardType::EBT_XYZ:  pos->Q = *camera_RZZXY;  break;
-				case eBillboardType::EBT_Yp:   { MATH3DVEC to_camera(*camera_pos - pos->P);
-												 pos->Q = MATH3DQUATERNION(DF_VEC, MATH3DVEC(to_camera.x, 0, to_camera.z));
+				case eBillboardType::EBT_Yp:   { MATH3DVEC to_camera(*camera_pos - pos->P);  // -x и -z поправка перевёрнутости
+												 pos->Q = MATH3DQUATERNION(DF_VEC, MATH3DVEC(-to_camera.x, 0, -to_camera.z));
 												 break; }
 				}
 

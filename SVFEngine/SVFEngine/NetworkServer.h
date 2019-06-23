@@ -29,7 +29,7 @@ namespace SAVFGAME
 {
 	class CNetServer
 	{
-	private:		
+	private:
 		struct
 		{
 			NETMSG _;
@@ -716,7 +716,8 @@ namespace SAVFGAME
 			uint32 count = (uint32) model.size();
 
 			for (uint32 i=0; i<count; i++)
-			if (model[i]->enable && model[i]->dynamic)
+			if (model[i]->dynamic)
+			if (model[i]->IsObjEnabled())
 			{
 				if (_SZTP(*osd) + NETGMDHDSZ > NETRAWSZ - netmsg_o[jid]->header.length)
 				{

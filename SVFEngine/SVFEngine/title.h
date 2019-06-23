@@ -22,6 +22,6 @@
 #define PRODUCT_DESCRIPTION		L"SVF Game Engine - Alpha Prototype"	// FILE DESCRIPTION
 #define PRODUCT_FILENAME		L"SVFEngine.exe"						// INTERNAL NAME
 #define PRODUCT_NAME			L"SVFEngine"							// GAME NAME
-#define PRODUCT_COPYRIGHT		L"Savenkov F.A. (C) 2017-2018"			// LEGALS
+#define PRODUCT_COPYRIGHT		L"Savenkov F.A. (C) 2017-2019"			// LEGALS
 
 #endif

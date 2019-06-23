@@ -18,11 +18,14 @@
 #include "ModelRe.h"
 #include "SkyboxRe.h"
 #include "Sprite.h"
+#include "Sound.h"
 
 #define  DEFAULT_MAP_ID        0
 #define  DEFAULT_PLAYER_SPAWN  0
 
 #define  CGameMapF  CGameMap  // class final
+
+// TODO: ERROR-модель по умолчанию
 
 namespace SAVFGAME
 {
@@ -52,6 +55,19 @@ namespace SAVFGAME
 		OBJECT_SPRITE,		// MapSpriteSetting
 
 		OBJECT_ENUM_MAX
+	};
+
+	enum eObjectAction
+	{
+		OBJACTION_NONE   = 0,
+
+		OBJACTION_RUN    = MASK_BIT_00,
+		OBJACTION_PAUSE  = MASK_BIT_01,
+		OBJACTION_RESUME = MASK_BIT_02,
+		OBJACTION_STOP   = MASK_BIT_03,
+
+		OBJACTION_ENABLE  = MASK_BIT_04,
+		OBJACTION_DISABLE = MASK_BIT_05,
 	};
 
 	struct MapObjectLinker
@@ -115,8 +131,8 @@ namespace SAVFGAME
 		{
 			Close();
 		}
-		~MapObjectSetting() {}
-		void Close()
+		~MapObjectSetting() override {}
+		void Close() override
 		{
 			name      = L"";
 			filename  = L"";
@@ -135,11 +151,11 @@ namespace SAVFGAME
 		wstring						filename;		// (опционально) связанный с объектом файл
 		COLORVEC					color;			// (опционально) цвет объекта
 		MapObjectLinker				parent;			// (опционально) связанный вышестоящий объект
-		VECPDATA <MapObjectLinker>	child;			// связанные нижестоящие объекты
-		bool						enable;			// объект включен или выключен
+		VECPDATA <MapObjectLinker>	child;			// связанные нижестоящие объекты		
 		uint32						id_data;		// (опционально) номер в списке <MapData>
 	protected:
-		InterpolationMemory			MEM; // memory for interpolation
+		bool						enable;			// объект включен или выключен
+		InterpolationMemory			MEM;            // memory for interpolation
 	public:
 		void MemoryS(const MATH3DVEC & scale)           { MEM.S.SetNext(scale);    }
 		void MemoryP(const MATH3DVEC & position)        { MEM.P.SetNext(position); }
@@ -163,12 +179,16 @@ namespace SAVFGAME
 		}
 	protected:
 		uint32						id_list;		// (опционально) номер в списке <MapLoadList>
+	public:
+		virtual void EnableObj()  { enable = true;  } // TIP: можно переопределить логику в конечном объекте
+		virtual void DisableObj() { enable = false; } // TIP: можно переопределить логику в конечном объекте
+		bool IsObjEnabled()       { return enable;  }
 	};
 	struct MapObjectSpawnSetting : public MapObjectSetting
 	{
 		MapObjectSpawnSetting() : MapObjectSetting(), spawn_type(OBJECT_NONE) { }
-		~MapObjectSpawnSetting() { }
-		void Close()
+		~MapObjectSpawnSetting() override { }
+		void Close() override
 		{
 			MapObjectSetting::Close();
 		}
@@ -188,12 +208,12 @@ namespace SAVFGAME
 
 			MapObjectSetting::pos = setting->pos;
 		}
-		~MapLightSetting()
+		~MapLightSetting() override final
 		{
 			setting_shr = nullptr;
 			setting     = nullptr;
 		}
-		void Close()
+		void Close() override final
 		{
 			if (setting != nullptr)
 				setting->Close();
@@ -207,8 +227,8 @@ namespace SAVFGAME
 		friend class MapObjects;
 		friend class CGameMap;
 		MapModelSetting() : MapObjectSetting() { Close(); }
-		~MapModelSetting() { }
-		void Close()
+		~MapModelSetting() override final { }
+		void Close() override final
 		{
 			dynamic     = true;
 			pick        = false;
@@ -227,10 +247,14 @@ namespace SAVFGAME
 		CModelR *    data;		// фактические данные модели
 	public:
 		//>> Отрисовка модели
-		void Show()
+		bool Show()
 		{
+			if (data == nullptr) return false;
+
 			if (!dynamic) data->ShowModelStatic(pos, id_matrix);
 			else          data->ShowModel(pos);
+
+			return true;
 		}
 	};
 	struct MapPlayerSpawnSetting : public MapObjectSpawnSetting
@@ -242,33 +266,196 @@ namespace SAVFGAME
 			spawn_type = OBJECT_PLAYER;
 			camera_mode = CM_NOCONTROL;
 		}
-		~MapPlayerSpawnSetting(){}
-		void Close()
+		~MapPlayerSpawnSetting() override final {}
+		void Close() override final
 		{
+			spawn_type = OBJECT_PLAYER;
 			camera_mode = CM_NOCONTROL;
 			MapObjectSpawnSetting::Close();
 		}
 	public:
 		eCameraMode  camera_mode;	// режим вида камеры
 	};
-	struct MapSoundSetting : public MapObjectSetting // TODO...
+	struct MapSoundSetting : public MapObjectSetting
 	{
 		friend class MapObjects;
 		friend class CGameMap;
-		MapSoundSetting() : MapObjectSetting() {}
-		~MapSoundSetting(){}
-		void Close()
+		MapSoundSetting() : MapObjectSetting() { Reset(); }
+		~MapSoundSetting() override final {}
+	private:
+		void Reset()
 		{
+			GID.element = eSoundGroup_ELEMENT_MAX;
+			GID.group   = eSoundGroup_USER_MAX;
+
+			volume_max   = 1.f;
+			volume_start = 1.f;
+			volume       = 1.f;
+			max_distance = 1000.f;
+			group_id     = DEFAULT_SOUND_GROUP;
+
+			b_activate             = false;
+			b_eSoundRunAsync       = false;
+			b_eSoundRunLoop        = false;
+			b_eSoundRunStopAtStart = false;
+			b_eSoundRunStopAtEnd   = false;
+			b_eSoundRunMix         = false;
+			b_UI                   = false;
+
+			max_dist_reached       = false;
+			engine_status_run      = false;
+			engine_status_pause    = false;
+
+			disable_forced         = false;
+		}
+	public:
+		void Close() override final
+		{
+			Reset();
 			MapObjectSetting::Close();
 		}
+	public:
+		float volume_max;            // ограничитель (от 0.0 до 1.0) на изменения текущего <volume>
+		float volume_start;          // запомненное стартовое значение
+		float volume;                // текущее значение
+		float max_distance;          // максимальное расстояние слышимости
+		uint32 group_id;             // заказанный номер группы
+		bool b_activate;             // запуск сразу после загрузки?
+		bool b_eSoundRunAsync;       // метод запуска - асинхронный
+		bool b_eSoundRunLoop;        // метод запуска - зацикленный звук
+		bool b_eSoundRunStopAtStart; // метод запуска - не сразу, а по вызову Resume()
+		bool b_eSoundRunStopAtEnd;   // метод запуска - не закрывать поток после окончания (недействительно при зацикленном)
+		bool b_eSoundRunMix;         // метод запуска - через свой микшер (не требует доп. интерфейса у аудиокарты) 
+		bool b_UI;                   // не является частью сцены (звук интерфейса)
+	public:
+	////// POST SET //////
+		uint64_gid GID;              // выданный звуковым движком идентификатор
+		bool max_dist_reached;       // признак достижения максимального расстояния, когда звук уже не слышно
+		bool engine_status_run;      // статус фактического запуска в звуковом движке
+		bool engine_status_pause;    // статус фактической паузы в звуковом движке
+	private:
+		bool disable_forced; // заказ на отключение объекта звука
+	private:
+		struct MapSoundSetting_Status
+		{
+			MapSoundSetting_Status() { Reset(); }
+
+			void Reset()
+			{
+				init   = false;
+				run    = false;
+				pause  = false;
+			}
+
+			bool  init;   // статус первичной инициализации
+			bool  run;    
+			bool  pause;
+		};
+		MapSoundSetting_Status stat_prev;
+		MapSoundSetting_Status stat_cur;
+	public:
+		void SoundInit()
+		{
+			bool hRes = !stat_cur.init;
+
+			if (hRes)
+			{
+				stat_cur.init = true;
+				stat_cur.run  = b_activate;
+
+				volume = volume_start;
+			}		
+
+			//return hRes;
+		};
+		void SoundReInit()
+		{
+			stat_prev.Reset();
+			stat_cur.Reset();
+
+			//return
+				SoundInit();
+		};
+		
+	public:
+		void SoundRuleRun()    { stat_cur.run   = true;  }
+		void SoundRuleStop()   { stat_cur.run   = false; }
+		void SoundRulePause()  { stat_cur.pause = true;  }
+		void SoundRuleResume() { stat_cur.pause = false; }
+	public:
+		void SoundRuleCLEAR()
+		{
+			stat_prev.run   = false;
+			stat_prev.pause = false;
+			stat_cur.run    = false;
+			stat_cur.pause  = false;
+		}
+		void SoundRuleCLEARPAUSE(bool val)
+		{
+			stat_prev.pause = val;
+			stat_cur.pause  = val;
+		}
+	public:
+		//>> Сообщает битовый набор <eObjectAction> действий к исполнению
+		uint32 SoundCheckAction()
+		{
+			uint32 hRes = eObjectAction::OBJACTION_NONE;
+
+			bool force_to_run  = !stat_prev.run &&  stat_cur.run ;
+			bool force_to_stop =  stat_prev.run && !stat_cur.run ;
+
+			bool force_to_pause   = !stat_prev.pause &&  stat_cur.pause ;
+			bool force_to_resume  =  stat_prev.pause && !stat_cur.pause ;
+
+				 if (force_to_run)  hRes |= OBJACTION_RUN;
+			else if (force_to_stop) hRes |= OBJACTION_STOP;
+
+				 if (force_to_pause)  hRes |= OBJACTION_PAUSE;
+			else if (force_to_resume) hRes |= OBJACTION_RESUME;
+
+			// запоминаем статус
+			stat_prev = stat_cur;
+
+			return hRes;
+		}
+	
+	public:
+		void EnableObj() override final
+		{
+			// если выключен - включить и сбросить память запроса на отключение
+
+			if (!enable)
+			{
+				enable = true;
+				DisableObj_ResetForce();
+			}		
+		}
+		void DisableObj() override final
+		{
+			disable_forced = true;
+		}
+		void DisableObj_ResetForce()
+		{
+			disable_forced = false;
+		}
+		bool DisableObj_GetForce()
+		{
+			return disable_forced;
+		}
+		void DisableObj_MakeForce()
+		{
+			if (disable_forced)
+				enable = false;
+		}
+		
 	};
 	struct MapSkyboxSetting : public MapObjectSetting
 	{
 		friend class MapObjects;
 		friend class CGameMap;
 		MapSkyboxSetting() : MapObjectSetting() {}
-		~MapSkyboxSetting(){}
-		void Close()
+		~MapSkyboxSetting() override final {}
+		void Close() override final
 		{
 			data = nullptr;
 			MapObjectSetting::Close();
@@ -305,8 +492,8 @@ namespace SAVFGAME
 			uint16			frameL;		// (optional) last  frame in render circle
 		};
 		MapSpriteSetting() : MapObjectSetting() { pos = data->pos; Close(); }
-		~MapSpriteSetting() { }
-		void Close()
+		~MapSpriteSetting() override final { }
+		void Close() override final
 		{
 			init.prefix   = "";
 			init.eBT      = EBT_NONE;
@@ -367,17 +554,30 @@ namespace SAVFGAME
 		};
 		struct MapLoadList // имена файлов к загрузке
 		{
+			struct MapLoadListData
+			{
+				void Close()
+				{
+					filename.erase (filename.begin(), filename.end());
+					obj_id.erase   (obj_id.begin(),   obj_id.end());
+				}
+
+				wstring filename;       // имя файла
+				vector <uint32> obj_id; // ссылающиеся на это имя объекты
+			};
+
 			void Close()
 			{
-				model.erase      (model.begin(),      model.end());
-				skybox.erase     (skybox.begin(),     skybox.end());
-				sound.erase      (sound.begin(),      sound.end());
-				tex_sprite.erase (tex_sprite.begin(), tex_sprite.end());
-			};
-			vector <wstring>	model;		 // models to load
-			vector <wstring>	skybox;		 // skyboxes to load
-			vector <wstring>	sound;		 // sounds to load :: TODO...
-			vector <wstring>	tex_sprite;  // textures profiles to load
+				model.Close(1,1);
+				skybox.Close(1,1);
+				sound.Close(1,1);
+				tex_sprite.Close(1,1);
+			}
+
+			VECPDATA <MapLoadListData>	model;		// models to load
+			VECPDATA <MapLoadListData>	skybox;		// skyboxes to load
+			VECPDATA <MapLoadListData>	sound;		// sounds to load
+			VECPDATA <MapLoadListData>	tex_sprite;	// textures profiles to load
 		};
 		struct MapObjects // объекты сцены
 		{
@@ -390,10 +590,11 @@ namespace SAVFGAME
 				skybox.Close(1,1);
 				sprite.Close(1,1);
 			};
+			
 			VECDATAP <MapLightSetting>			light;
 			VECDATAP <MapModelSetting>			model;
 			VECDATAP <MapPlayerSpawnSetting>	player;
-			VECDATAP <MapSoundSetting>			sound;		// TODO...
+			VECDATAP <MapSoundSetting>			sound;
 			VECDATAP <MapSkyboxSetting>			skybox;
 			VECDATAP <MapSpriteSetting>			sprite;
 		};
@@ -404,13 +605,15 @@ namespace SAVFGAME
 				model.Close(1,1);
 				skybox.Close(1,1);		
 				tex_sprite.Close(1,1);
-				light.Close();
+				sound.Delete(1);
+				////
+				light.Close();			
 			};
-			VECDATAP <CModelR>			model;
-			VECDATAP <CSkyboxR>			skybox;
-			VECDATAP <CTexProfileR>		tex_sprite;
-			CBaseLight					light;
-			//CSound *					sound;		// TODO...
+			VECDATAP <CModelR>					model;
+			VECDATAP <CSkyboxR>					skybox;
+			VECDATAP <CTexProfileR>				tex_sprite;
+			VECPDATA <TBUFFERS <byte, int32>>	sound;
+			CBaseLight							light;
 		};
 	public:
 		MapSetup		setup;	// базовые настройки карты		
@@ -452,8 +655,8 @@ namespace SAVFGAME
 		{
 			if (isInit) { _MBM(ERROR_InitAlready); return false; }
 
-			wchar_t syspath[256], error[256], p1[256], p2[256];
-			GetCurrentDirectory(256, syspath);
+			wchar_t syspath[MAX_PATH], error[MAX_PATH * 2], p1[MAX_PATH], p2[MAX_PATH];
+			GetCurrentDirectory(MAX_PATH, syspath);
 
 			wchar_t *p = nullptr;
 
@@ -461,7 +664,7 @@ namespace SAVFGAME
 			wsprintf(p1, L"%s\\%s\\%s", gamePath, DIRECTORY_MAPS, filename);
 			wsprintf(p2, L"%s\\%s\\%s", syspath, DIRECTORY_MAPS, filename);
 
-			if (p = LoadFileCheck64((int64)p1, (int64)p2)) return isInit = LoadProc(p);
+			if (p = LoadFileCheck({ p1, p2 })) return isInit = LoadProc(p);
 			else _MBM(error);
 
 			return false;
@@ -933,25 +1136,92 @@ namespace SAVFGAME
 			} //else printf("\nUnknown sprite type : %s", setting);
 			//*/
 		}
-		//>> Чтение настройки звуков :: TODO...
+		//>> Чтение настройки звуков
 		void ReadPropertySound(byte * setting, byte * fpbuf, uint64 id)
 		{
-			// TODO...
+			uint32 readtype = 0;
+
+				 if (Compare(setting, _SLEN("async")))       readtype = 1;
+			else if (Compare(setting, _SLEN("loop")))        readtype = 2;
+			else if (Compare(setting, _SLEN("stop_start")))  readtype = 3;
+			else if (Compare(setting, _SLEN("stop_end")))    readtype = 4;
+			else if (Compare(setting, _SLEN("in_mixer")))    readtype = 5;
+			else if (Compare(setting, _SLEN("interface")))   readtype = 6;
+			else if (Compare(setting, _SLEN("activate")))    readtype = 7;
+			else if (Compare(setting, _SLEN("group_id")))    readtype = 8;
+			else if (Compare(setting, _SLEN("volume_max")))  readtype = 9;
+			else if (Compare(setting, _SLEN("volume")))      readtype = 10;
+			else if (Compare(setting, _SLEN("distance")))    readtype = 11;
+			else if (Compare(setting, _SLEN("enable")))      readtype = 12;
+			else if (Compare(setting, _SLEN("parent_m")))    readtype = 98;
+			else if (Compare(setting, _SLEN("pos")))         readtype = 99;
+			else if (Compare(setting, _SLEN("name")))        readtype = 101;
+			else if (Compare(setting, _SLEN("file")))        readtype = 102;
+			else if (Compare(setting, _SLEN("parent")))      readtype = 103;
+
+			if (readtype)
+			{
+				char str[256];
+				uint32 n=0, n2=0, n3=0, n4=0;				//printf("\nReading sound type %i", readtype);
+				float f;
+
+				CODESKIPSPACE
+				ZeroMemory(str, 256);
+				if (readtype < 100) // not wstring
+				{
+					CODEREADSTRINGVALUE		//printf(" : %s", str);
+				}
+				else if (readtype < 200) // wstring
+				{
+					CODEREADSTRINGWTEXT		//wprintf(L" : %s", (wchar_t*)str);
+				}
+				else // std::string
+				{
+					CODEREADSTRINGTEXT
+				}
+
+				//WPOS * pos;
+				auto pos = obj.sound[id]->pos;
+				switch (readtype)
+				{
+				case 1: sscanf_s(str, "%i", &n); obj.sound[id]->b_eSoundRunAsync       = _BOOL(n); break;
+				case 2: sscanf_s(str, "%i", &n); obj.sound[id]->b_eSoundRunLoop        = _BOOL(n); break;
+				case 3: sscanf_s(str, "%i", &n); obj.sound[id]->b_eSoundRunStopAtStart = _BOOL(n); break;
+				case 4: sscanf_s(str, "%i", &n); obj.sound[id]->b_eSoundRunStopAtEnd   = _BOOL(n); break;
+				case 5: sscanf_s(str, "%i", &n); obj.sound[id]->b_eSoundRunMix         = _BOOL(n); break;
+				case 6: sscanf_s(str, "%i", &n); obj.sound[id]->b_UI                   = _BOOL(n); break;
+				case 7: sscanf_s(str, "%i", &n); obj.sound[id]->b_activate             = _BOOL(n); break;
+				case 8: sscanf_s(str, "%i", &n); obj.sound[id]->group_id               = n; break;
+				case 9: sscanf_s(str, "%f", &f); obj.sound[id]->volume_max             = f; break;
+				case 10: sscanf_s(str, "%f", &f); obj.sound[id]->volume_start          = f;        // запоминаем стартовое значение
+					                              obj.sound[id]->volume                = f; break; // устанавливаем стартовое текущим
+				case 11: sscanf_s(str, "%f", &f); obj.sound[id]->max_distance          = f; break;
+				case 12: sscanf_s(str, "%i", &n); obj.sound[id]->enable                = _BOOL(n); break;
+				case 98: sscanf_s(str, "%i", &n); obj.sound[id]->parent.method = (eParentMethod)n;  break;
+				case 99: sscanf_s(str, "%f,%f,%f", &pos->x,  &pos->y,  &pos->z);                    break;
+				case 101: obj.sound[id]->name.assign((wchar_t*)str);        break;
+				case 102: obj.sound[id]->filename.assign((wchar_t*)str);    break;
+				case 103: obj.sound[id]->parent.name.assign((wchar_t*)str); break;
+				}
+			} //else printf("\nUnknown sound type : %s", setting);
+			//*/
 		}
 		template<class T1, class T2>
 		//>> Составление списка файлов на загрузку (тело процедуры)
 		void SortLoadedFileNames_Proc(T1 & obj_vec, T2 & target_list)
 		{
+			uint32 i_obj = 0;
 			for (auto & o : obj_vec)
 			{
 				bool name_already_in_list = false;	// отсортируем повторы
 				uint32 listed_name_id = 0;			// текущий сравниваемый номер имени в списке
 
-				for (auto & _list : target_list)
+				for (auto _list : target_list)
 				{
-					if (!_list.compare(o->filename)) // если такое имя уже есть в списке
-					{
-						o->id_list = listed_name_id; // сохраним списковый id в объекте
+					if (!_list->filename.compare(o->filename)) // если такое имя уже есть в списке
+					{			
+						_list->obj_id.emplace_back(i_obj); // сохраним id объекта в списке
+						o->id_list = listed_name_id;       // сохраним списковый id в объекте
 						name_already_in_list = true;
 						break;
 					}
@@ -959,11 +1229,18 @@ namespace SAVFGAME
 				}
 
 				if (!name_already_in_list) // если мы так и не нашли такого имени в списке
-				{
-					o->id_list = listed_name_id;			// сохраним списковый id в объекте
-					target_list.emplace_back(o->filename);	// дополним список новым именем
+				{				
+					target_list.emplace_back_create(); // создаём новую страницу списка
+					auto _list = target_list.last();   // .
+
+					_list->filename = o->filename;     // дополним список новым именем
+					_list->obj_id.emplace_back(i_obj); // сохраним id объекта в списке
+					o->id_list = listed_name_id;	   // сохраним списковый id в объекте
+
 					//wprintf(L"\nLIST NAME: %s", o->filename.c_str());
 				}
+
+				i_obj++; // next object
 			}
 		}
 		//>> Составление списка файлов на загрузку
@@ -971,7 +1248,8 @@ namespace SAVFGAME
 		{
 			SortLoadedFileNames_Proc(obj.skybox, list.skybox);
 			SortLoadedFileNames_Proc(obj.model,  list.model);
-			SortLoadedFileNames_Proc(obj.sprite, list.tex_sprite);			
+			SortLoadedFileNames_Proc(obj.sprite, list.tex_sprite);
+			SortLoadedFileNames_Proc(obj.sound,  list.sound);
 
 			bool default_sky_present = false;
 			for (auto & o : obj.skybox)
@@ -1150,16 +1428,21 @@ namespace SAVFGAME
 
 	public:
 		//>> Загрузчик данных
-		void RAMDataLoader(const CShader * shader, const DEV3DBASE * dev, const CBaseCamera * camera, const CStatusIO * IO)
+		void RAMDataLoader(const CShader * shader,
+			               const DEV3DBASE * dev,
+						   const CBaseCamera * camera,
+						   const CStatusIO * IO,
+						   const CSound * sound)
 		{
 			if (!isInit) { _MBM(ERROR_InitNone); return; }
 
 			auto cam = const_cast<CBaseCamera*>(camera);
 			RAMDataLoadSkybox(shader, dev, cam->GetNearPlane());
 			RAMDataLoadLights(shader);
+			RAMDataLoadSounds(const_cast<CSound*>(sound));
 			RAMDataLoadSprites(shader, dev, camera, IO);
-			RAMDataLoadModels(shader, dev);		
-
+			RAMDataLoadModels(shader, dev);
+			
 			isLoaded = true;
 		}
 	
@@ -1167,7 +1450,7 @@ namespace SAVFGAME
 		//>> Подготовка неба
 		void RAMDataLoadSkybox(const CShader * shader, const DEV3DBASE * dev, float camera_near_plane)
 		{
-			uint32 i, n;
+			uint32 i; // , n;
 
 			i = 0;
 			for (auto & _list : list.skybox) // список загружаемых skybox'ов
@@ -1176,24 +1459,36 @@ namespace SAVFGAME
 				uint32 N = (uint32)data.skybox.last_id();	// текущий skybox data ID
 				auto skybox = data.skybox[N].get();
 				skybox->Init(dev, shader);
-				skybox->SetSphereTexture(DIRECTORY_GAME, _list.c_str(), camera_near_plane + 1, CULL_DEFCCW);
+				skybox->SetSphereTexture(DIRECTORY_GAME, _list->filename.c_str(), camera_near_plane + 1, CULL_DEFCCW);
 
-				n = 0;
-				for (auto & o : obj.skybox) // свяжем объект с фактическими данными
+			//	n = 0;
+			//	for (auto & o : obj.skybox) // свяжем объект 'obj' с фактическими данными 'data'
+			//	{
+			//		if (o->id_list == i)
+			//		{
+			//			o->id_data = N;
+			//			o->data = skybox;
+			//		}
+			//
+			//		// установим текущий используемый skybox карты согласно настройкам //
+			//
+			//		if (setup.skybox_id == n) 
+			//			this->sky_id = o->id_data;
+			//
+			//		n++; // next obj
+			//	}
+
+				for (auto obj_id : _list->obj_id) // свяжем объекты с фактическими данными
 				{
-					if (o->id_list == i)
-					{
-						o->id_data = N;
-						o->data = skybox;
-					}
+					auto & o = obj.skybox[obj_id];
 
-					// установим текущий используемый skybox карты согласно настройкам //
+					o->id_data = N;
+					o->data = skybox; // передаём в объект указатель на данные
 
-					if (setup.skybox_id == n) 
-						this->sky_id = o->id_data;
-
-					n++; // next obj
+					if (setup.skybox_id == obj_id) // установим текущий используемый skybox карты согласно настройкам
+						this->sky_id = N;
 				}
+
 				i++; // next list
 			}
 		}
@@ -1221,30 +1516,41 @@ namespace SAVFGAME
 				uint32 N = (uint32)data.model.last_id();	// номер созданной модели
 				auto model = data.model[N].get();
 
-				if (!model->Load(DIRECTORY_GAME, _list.c_str())) // загружаем...   TODO: ERROR-модель по умолчанию
+				if (!model->Load(DIRECTORY_GAME, _list->filename.c_str())) // загружаем...   TODO: ERROR-модель по умолчанию
 				{
 					wchar_t error[256];
-					wsprintf(error, L"Can't find model '%s' [map %s]", _list.c_str(), setup.mapname.c_str());
+					wsprintf(error, L"Can't find model '%s' [map %s]", _list->filename.c_str(), setup.mapname.c_str());
 					_MBM(error);
 				}
 				model->SetDevice(dev);
 				model->SetShader(shader);
 
-				for (auto & o : obj.model) // свяжем объект с фактическими данными
+			//	for (auto & o : obj.model) // свяжем объект с фактическими данными
+			//	{
+			//		if (o->id_list == i)
+			//		{
+			//			o->id_data = N;
+			//			o->data = model; // передаём в объект указатель на данные модели
+			//		}
+			//
+			//		// для статической модели сразу зададим мировую матрицу //
+			//
+			//		if (!o->dynamic) 
+			//			o->id_matrix = model->StaticMatAdd(o->pos);
+			//	}
+
+				for (auto obj_id : _list->obj_id) // свяжем объекты с фактическими данными
 				{
-					if (o->id_list == i)
-					{
-						o->id_data = N;
-						o->data = model;
-					}
+					auto & o = obj.model[obj_id];
 
-					// для статической модели сразу зададим мировую матрицу //
+					o->id_data = N;
+					o->data = model; // передаём в объект указатель на данные
 
-					if (!o->dynamic) 
+					if (!o->dynamic) // для статической модели сразу зададим мировую матрицу
 						o->id_matrix = model->StaticMatAdd(o->pos);
 				}
 
-				if (!setup.defpmodel.compare(_list)) // установим id для модели игрока по умолчанию
+				if (!setup.defpmodel.compare(_list->filename)) // установим id для модели игрока по умолчанию
 					setup.defpmodel_id = N;
 
 				i++; // next list
@@ -1260,17 +1566,101 @@ namespace SAVFGAME
 				uint32 N = (uint32)data.tex_sprite.last_id();	// номер созданного профиля
 				auto tex = data.tex_sprite[N].get();
 
-				tex->Load(DIRECTORY_GAME, DIRECTORY_SPRITES, _list.c_str()); // загружаем...
+				tex->Load(DIRECTORY_GAME, DIRECTORY_SPRITES, _list->filename.c_str()); // загружаем...
 				tex->SetDevice(dev);
 				tex->SetShader(shader);
 				tex->SetIO(IO);
 
-				for (auto & o : obj.sprite) // свяжем объект с фактическими данными
-					if (o->id_list == i)
-						o->id_data = N;
+			//	for (auto & o : obj.sprite) // свяжем объект с фактическими данными
+			//		if (o->id_list == i)
+			//			o->id_data = N;
+
+				for (auto obj_id : _list->obj_id) // свяжем объекты с фактическими данными
+				{
+					auto & o = obj.sprite[obj_id];
+
+					o->id_data = N;
+				}
 
 				i++; // next list
 			}
+		}
+		//>> Подготовка звуков
+		void RAMDataLoadSounds(CSound * sound)
+		{
+			wchar_t syspath[MAX_PATH], error[MAX_PATH * 2], p1[MAX_PATH], p2[MAX_PATH];
+			GetCurrentDirectory(MAX_PATH, syspath);
+
+			uint32 i = 0;
+			for (auto & _list : list.sound) // список загружаемых звуков
+			{
+				data.sound.AddCreate(1);					// создаём новый профиль
+				uint32 N = (uint32)data.sound.last_id();	// номер созданного профиля
+				auto file = data.sound[N];
+				bool file_loaded = false;
+
+				// загрузим файлы с ЖД
+				{
+					wchar_t *p = nullptr;
+
+					wsprintf(p1, L"%s\\%s\\%s", DIRECTORY_GAME, DIRECTORY_SOUNDS, _list->filename.c_str());
+					wsprintf(p2, L"%s\\%s\\%s",        syspath, DIRECTORY_SOUNDS, _list->filename.c_str());
+
+				//	if (p = LoadFileCheck(2, p1, p2))
+					if (p = LoadFileCheck( { p1, p2 } ))
+					{
+						file_loaded = ReadFileInMemory(p, *file, true);
+					}
+					else
+					{
+						wsprintf(error, L"%s %s", ERROR_OpenFile, _list->filename.c_str());
+						_MBM(error);
+						//wprintf(L"\n%s", error);
+					}
+				}
+
+				// вгрузим в звуковой движок
+
+				bool first = true;
+				uint64_gid first_gid;
+
+				for (auto obj_id : _list->obj_id) 
+				{
+					auto & o = obj.sound[obj_id];
+
+					error_t hRes;
+					if (file_loaded)
+					{
+						if (first) // проверку валидности файла - только 1 раз
+						{
+							hRes = sound->Load(file, _list->filename.c_str(), o->group_id, o->GID._u64);
+
+							first     = false;
+							first_gid = o->GID;
+
+							if (hRes == eSoundError_TRUE)
+							{
+								sound->FormalNameSet(o->GID, o->name);
+							}
+						}
+						else // остальные быстро связываем с первым
+						{
+							if (hRes == eSoundError_TRUE)
+							{
+								sound->Load(first_gid, o->group_id, o->GID._u64);
+								sound->FormalNameSet(o->GID, o->name);
+							}
+						}
+
+						o->id_data = N;
+					}
+				}
+
+				i++; // next list
+			}
+
+			// можно очистить
+			data.sound.Close(1,1);
 		}
 
 	public:
@@ -1305,8 +1695,21 @@ namespace SAVFGAME
 					sprite->Reset(true, o->init.center_x, o->init.center_y, true);
 			}
 
-			// Скайбокс загрузится позже сам при вызове на показ
-			// Модели загрузятся позже сами при вызове на показ
+			// Предзагрузка моделей
+			for (auto & o : obj.model)
+			{
+				auto model = o->data;
+
+				model->PrepareModel();
+			}
+
+			// Предзагрузка неба
+			for (auto & o : obj.skybox)
+			{
+				auto skybox = o->data;
+
+				skybox->PrepareSkybox();
+			}
 		}
 
 	public:
@@ -1349,6 +1752,7 @@ namespace SAVFGAME
 		const DEV3DBASE *		dev		{ nullptr };
 		const CBaseCamera *		camera	{ nullptr };
 		const CStatusIO *		IO		{ nullptr };
+		const CSound *          sound   { nullptr };
 	protected:
 		VECDATAPP <CGameMapF>	map;		// набор карт
 		uint32					cid;		// id текущей карты
@@ -1371,12 +1775,17 @@ namespace SAVFGAME
 			dev    = nullptr;
 			camera = nullptr;
 			IO     = nullptr;
+			sound  = nullptr;
 			isInit = false;
 		}
 
 		CGameMapF * operator[](size_t idx) { return map[idx]; }
 
-		bool Init(const DEV3DBASE * pDevice, const CShader * pShader, const CBaseCamera * pCamera, const CStatusIO * pIO)
+		bool Init(const DEV3DBASE * pDevice,
+			      const CShader * pShader,
+				  const CBaseCamera * pCamera, 
+				  const CStatusIO * pIO,
+				  const CSound * pSound)
 		{
 			if (isInit) return false;
 
@@ -1384,11 +1793,13 @@ namespace SAVFGAME
 			if (pDevice == nullptr) { _MBM(ERROR_PointerNone); return false; }
 			if (pCamera == nullptr) { _MBM(ERROR_PointerNone); return false; }
 			if (pIO     == nullptr) { _MBM(ERROR_PointerNone); return false; }
+			if (pSound  == nullptr) { _MBM(ERROR_PointerNone); return false; }
 
 			shader = pShader;
 			dev    = pDevice;
 			camera = pCamera;
 			IO     = pIO;
+			sound  = pSound;
 
 			return isInit = true;
 		}
@@ -1477,7 +1888,7 @@ namespace SAVFGAME
 
 			if (!map[id]->Load(DIRECTORY_GAME, filename.c_str())) return false;
 
-			map[id]->RAMDataLoader(shader, dev, camera, IO);
+			map[id]->RAMDataLoader(shader, dev, camera, IO, sound);
 
 			return true;
 		}

@@ -30,19 +30,23 @@ namespace SAVFGAME
 {
 	struct WInfo // параметры создания окна
 	{
-			WInfo() : title(PRODUCT_TITLE) { state = new CStatusWindow; };
-			~WInfo() { _DELETE(state); };
+	private:
+		CStatusWindow _;
+	public:
 
-			CStatusWindow *	state;
-			bool			resize		{ true };			// is resizable ?
-			DWORD			dwStyle		{ GAMEWINDOWED };
-			DWORD			dwExStyle	{ GAMEWINDOWED_EX };
-			wstring			title;
-			HWND			hWnd		{ nullptr };
-			HWND			hWndParent	{ nullptr };
-			HMENU			hMenu		{ nullptr };
-			LPVOID			lpParam		{ nullptr };
-			WNDCLASSEX		wc;		
+			WInfo() : title(PRODUCT_TITLE), state(&_) { };
+			~WInfo() { };
+
+			CStatusWindow * const	state;
+			bool					resize		{ true };			// is resizable ?
+			DWORD					dwStyle		{ GAMEWINDOWED };
+			DWORD					dwExStyle	{ GAMEWINDOWED_EX };
+			wstring					title;
+			HWND					hWnd		{ nullptr };
+			HWND					hWndParent	{ nullptr };
+			HMENU					hMenu		{ nullptr };
+			LPVOID					lpParam		{ nullptr };
+			WNDCLASSEX				wc;		
 	public:
 		WInfo(const WInfo& src)				= delete;
 		WInfo(WInfo&& src)					= delete;
@@ -78,7 +82,7 @@ namespace SAVFGAME
 
 			GetDesktopResolution();
 		};
-		~CWindow(){};
+		virtual ~CWindow(){};
 
 		HWND            GetHWND()         { return wInfo.hWnd;  }
 		CStatusWindow * GetWindowStatus() { return wInfo.state; }
@@ -96,6 +100,7 @@ namespace SAVFGAME
 			wInfo.state->desktop_horizontal = desktop.right;
 			wInfo.state->desktop_vertical   = desktop.bottom;
 		}
+
 	};
 }
 

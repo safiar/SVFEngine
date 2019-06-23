@@ -381,7 +381,7 @@ namespace SAVFGAME
 		float GetTimeFix()       { return cs.timefix;    }
 		float GetNearPlane()     { return cs.near_plane; }
 		float GetFarPlane()      { return cs.far_plane;  }
-		float GetAngleZ()        { return cs.angle_z; }
+		float GetAngleZ()        { return cs.angle_z; } // +/- 0..360
 		const MATH3DVEC *  GetCameraPos()        { return cs.pos;         }
 		const MATH3DVEC *  GetCameraLookAt()     { return cs.lookat;      }
 		const MATH3DQUATERNION * GetCameraRotate()     { return cs.rotate;      }
@@ -643,7 +643,7 @@ namespace SAVFGAME
 
 			MATH3DQUATERNION Qx(x_axis, cs.angle->x); // Вращение вокруг локальных осей СК вида :: тангаж / altitude / pitch
 			MATH3DQUATERNION Qy(y_axis, cs.angle->y); // Вращение вокруг локальных осей СК вида :: рысканье / heading / yaw
-			MATH3DQUATERNION Qz(z_axis, cs.angle->z); // Вращение вокруг локальных осей СК вида :: крен / bank / roll
+			MATH3DQUATERNION Qz(z_axis, 0);// в 3 лице нет! Вращение вокруг локальных осей СК вида :: крен / bank / roll
 
 			cs.angle->x = cs.angle->y = cs.angle->z = 0; // Запрос поворотов обработан -> сброс
 
@@ -722,8 +722,10 @@ namespace SAVFGAME
 			*cs.rotate_XY = MATH3DQUATERNION(Right, MATH3DVEC(VIEW_OX(mViewXY))) *
 				            MATH3DQUATERNION(Up,    MATH3DVEC(VIEW_OY(mViewXY))) ;			//cs.rotate_XY->_normalize_check();
 
+			// ZZ и ZZXY при виде от 3 лица - нет вращения по Z !
+
 			*cs.rotate_Z    = Qz;															//cs.rotate_Z->_normalize_check();
-			*cs.rotate_ZZ   = MATH3DQUATERNION(0, 0, cs.angle_z);							//cs.rotate_ZZ->_normalize_check();
+			*cs.rotate_ZZ   = MATH3DQUATERNION(0, 0, 0); //cs.angle_z);						//cs.rotate_ZZ->_normalize_check();
 			*cs.rotate_ZZXY = (*cs.rotate_ZZ) * (*cs.rotate_XY);							//cs.rotate_ZZXY->_normalize_check();
 
 			MATH3DVEC DF(DF_AXIS);

@@ -12,39 +12,27 @@
 
 using namespace SAVFGAME;
 
-#define ANGLES_ISTEP    100  //   1 /  STEP
-#define ANGLES_NUM    36000  // 360 * ISTEP
-#define ANGLES_STEP   0.01f  //   1 / ISTEP
-
 namespace SAVFGAME
 {
-	float* CTAB::sinAngleTab  = new float [ANGLES_NUM];
-	float* CTAB::cosAngleTab  = new float [ANGLES_NUM];
-	float* CTAB::tanAngleTab  = new float [ANGLES_NUM];
+	float CTAB::sinAngleTab [ANGLES_NUM];
+	float CTAB::cosAngleTab [ANGLES_NUM];
+	float CTAB::tanAngleTab [ANGLES_NUM];
+	bool  CTAB::isInit = false;
 
-	void CTAB::Close()
-	{
-		if (CTAB::sinAngleTab  != nullptr)  delete[] CTAB::sinAngleTab;
-		if (CTAB::cosAngleTab  != nullptr)  delete[] CTAB::cosAngleTab;
-		if (CTAB::tanAngleTab  != nullptr)  delete[] CTAB::tanAngleTab;
-		CTAB::sinAngleTab  = nullptr;
-		CTAB::cosAngleTab  = nullptr;
-		CTAB::tanAngleTab  = nullptr;
-	};
 	void CTAB::Init()
 	{
-		if (CTAB::sinAngleTab  == nullptr)  CTAB::sinAngleTab  = new float [ANGLES_NUM];
-		if (CTAB::cosAngleTab  == nullptr)  CTAB::cosAngleTab  = new float [ANGLES_NUM];
-		if (CTAB::tanAngleTab  == nullptr)  CTAB::tanAngleTab  = new float [ANGLES_NUM];
+		if (isInit) return;
 
 		int idx = 0;
 		for (float i=0; idx < ANGLES_NUM; i+=ANGLES_STEP, idx++)
 		{
-			auto angle = TORADIANS(i);
+			float angle = TORADIANS(i);
 			CTAB::sinAngleTab[idx]  = sin(angle);
 			CTAB::cosAngleTab[idx]  = cos(angle);
 			CTAB::tanAngleTab[idx]  = tan(angle);
 		}
+
+		isInit = true;
 	};
 
 	float CTAB::sinA(float angle)

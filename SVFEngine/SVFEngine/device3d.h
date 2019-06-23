@@ -70,7 +70,13 @@ namespace SAVFGAME
 	enum eDeviceError // device errors
 	{
 		DEVERROR_NONE,
-		DEVERROR_HVP,		// HARDWARE_VERTEXPROCESSING not supported
+		DEVERROR_HVP,			// HARDWARE_VERTEXPROCESSING not supported
+		DEVERROR_IDXBF32,		// 32bit INDEX BUFFER not supported
+		DEVERROR_PRESENTINT0,	// D3DPRESENT_INTERVAL_IMMEDIATE not supported
+		DEVERROR_PRESENTINT1,	// D3DPRESENT_INTERVAL_ONE not supported
+		DEVERROR_PRESENTINT2,	// D3DPRESENT_INTERVAL_TWO not supported
+		DEVERROR_PRESENTINT3,	// D3DPRESENT_INTERVAL_THREE not supported
+		DEVERROR_PRESENTINT4,	// D3DPRESENT_INTERVAL_FOUR not supported
 
 		DEVERROR_ENUM_MAX
 	};
@@ -178,8 +184,20 @@ namespace SAVFGAME
 		eRenderState	MEM_RSTATE_DESTBLEND;
 		bool			restore_memory_call;
 	};
-	struct DISPLAYMODE // monitor settings
+	struct DEPTHSTENCIL
 	{
+		DEPTHSTENCIL()  { Reset(); }
+		~DEPTHSTENCIL() { }
+		void Reset()
+		{
+			format = 0;
+			enableAuto = true;
+		}
+		UINT	format;		// eDisplayFormat
+		bool	enableAuto;	// EnableAutoDepthStencil
+	};
+	struct DISPLAYMODE // monitor settings
+	{	
 		DISPLAYMODE()  { Reset(); }
 		~DISPLAYMODE() { }
 		void Reset()
@@ -192,15 +210,18 @@ namespace SAVFGAME
 			numModes32  = 0;
 			numModes16  = 0;
 			for (auto & _ : mode) _ = false;
+			dstencil.Reset();
 		}
 		UINT	width;			// monitor width (pixels)
 		UINT	height;			// monitor height (pixels)
 		UINT	refreshRate;	// Hz
-		UINT	format;			// eDisplayFormat (surface format)
+		UINT	format;			// eDisplayFormat (surface format)	
 		////////////////////
 		UINT	numModes32;		// debug
 		UINT	numModes16;		// debug
 		bool	mode[0x100];	// debug :: true == is OK
+		////////////////////
+		DEPTHSTENCIL dstencil;
 	};
 	struct ADAPTER3DDESC
 	{
@@ -293,6 +314,27 @@ namespace SAVFGAME
 			printf("\n- WHQL day    = %i", WHQLLevel.day);
 		}
 	};
+	struct ADAPTERCAPS
+	{
+		ADAPTERCAPS()
+		{
+			maxVertexIndex         = 0;
+			presentationInterval._ = 0;		
+		}
+		uint32 maxVertexIndex;
+		union
+		{
+			byte _;
+			struct
+			{
+				bool immediate : 1;
+				bool one       : 1;
+				bool two       : 1;
+				bool three     : 1;
+				bool four      : 1;
+			};
+		} presentationInterval;
+	};
 
 	struct DataManagerCubeTexture // 3d texture manager : virtual base class
 	{
@@ -352,6 +394,7 @@ namespace SAVFGAME
 		virtual void SetTextureStageState(byte index, eTextureState state) = 0;
 		virtual void DrawPrimitive(ePrimTip tip, int32 base_vert, uint32 min_vert, uint32 verts, uint32 start_index, uint32 prims) = 0;
 		virtual eDeviceError CheckDevice() = 0;
+		virtual void PrintfDeviceCaps() = 0;
 	public:
 		virtual UINT GetRenderState(eRenderState RSTATE) = 0;
 		virtual void SetRenderState(eRenderState RSTATE, UINT _STATE_) = 0;
@@ -368,9 +411,11 @@ namespace SAVFGAME
 		{
 			SetDisplay(horizontal, vertical, MISSING, MISSING);
 		}
+		virtual bool CheckPresentationInterval(eIntervalData present) = 0;
 		void SetPresentationInterval(eIntervalData present)
 		{
-			PresentationInterval = present;
+			if (CheckPresentationInterval(present))
+				PresentationInterval = present;
 		}
 		void SetSamplesWindowed(DWORD nSamples)
 		{
@@ -431,6 +476,11 @@ namespace SAVFGAME
 			printf("\ndisplayMode.RefreshRate %i", display.refreshRate);
 			printf("\ndisplayMode.Format      %i", display.format);			//*/
 		}
+		void SetDisplay(DEPTHSTENCIL dstencil)
+		{
+			display.dstencil.format     = dstencil.format;
+			display.dstencil.enableAuto = dstencil.enableAuto;
+		}
 		void SetDisplayDefault(UINT width, UINT height, UINT refreshRate, UINT format)
 		{
 			if (_NOMISS(width))			display_default.width       = width;
@@ -446,6 +496,11 @@ namespace SAVFGAME
 		void SetDisplayDefault(UINT mode_id, bool working_condition)
 		{
 			display_default.mode[mode_id] = working_condition;
+		}
+		void SetDisplayDefault(DEPTHSTENCIL dstencil)
+		{
+			display_default.dstencil.format     = dstencil.format;
+			display_default.dstencil.enableAuto = dstencil.enableAuto;
 		}
 	private:
 		DEV3DBASE(const DEV3DBASE& src);
@@ -472,6 +527,7 @@ namespace SAVFGAME
 		DISPLAYMODE		display;					// presented monitor settings
 		DISPLAYMODE		display_default;			// [DEBUG] default settings
 		ADAPTER3DDESC	adapter_description;		// [DEBUG]
+		ADAPTERCAPS		adapter_caps;
 		eRenderStateMem RS;							// render state memory
 	};
 }

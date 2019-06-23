@@ -101,17 +101,20 @@ namespace SAVFGAME
 		bool				move;		// move event call
 		bool				rotate_mem;	// rotate event condition memory
 		bool				move_mem;	// move event condition memory
-	protected:		
+	protected:
 		const MATH3DVEC *	  cameraPos;	// данные от камеры
 		const MATH3DVEC *	  playerPos;	// данные от камеры (для вида от 3 лица, <posself> == точка модели)
 		const MATH3DMATRIX *  projMatPtr;	// данные от камеры
 		const MATH3DMATRIX *  viewMatPtr;	// данные от камеры
 	protected:
+		MATH3DVEC           vecpick_Y;  // Up      (ось вида вверх)
+		MATH3DVEC           vecpick_X;  // Left    (ось вида влево)
+		MATH3DVEC           vecpick_Z;  // Forward (ось вида вперёд)
+		MATH3DVEC           vecpick_XZ; // Forward + Left (45 град. влево)
+		MATH3DVEC           vecpick_ZX; // Forward - Left (45 град. вправо)
 		MATH3DVEC			vecpick;	// вектор захвата
 		MATH3DVEC			posself;	// 1ая точка линии взгляда (позиция игрока)
 		MATH3DVEC			pospick;	// 2ая точка линии взгляда (позиция захватываемой модели)
-		bool				recalcvec;	// нужно ли рассчитывать снова
-		bool				nextframe;  // сообщение о новом кадре
 	protected:
 		bool				server      { false }; // net status
 		bool				client      { false }; // net status
@@ -122,7 +125,7 @@ namespace SAVFGAME
 		CBaseInteract& operator=(CBaseInteract&& src)		= delete;
 		CBaseInteract& operator=(const CBaseInteract& src)	= delete;
 	public:
-		CBaseInteract() { Reset(); };
+		CBaseInteract() { Close(); };
 		~CBaseInteract(){};
 		void Close()
 		{
@@ -141,13 +144,10 @@ namespace SAVFGAME
 			status     = INTMODE_NONE;
 			mode       = INTMODE_NONE;
 			pickedID   = MISSING;
-			recalcvec  = true;
 			window_W   = 0;
 			window_H   = 0;
-			nextframe  = true;
 			MEM.Close();
 		}
-		void TipNextFrame() { nextframe = true; }
 		void SetRotate(bool condition) { rotate = condition; }
 		void SetMove(bool condition)   { move   = condition; }
 		bool GetRotate()               { return rotate; }
@@ -168,13 +168,14 @@ namespace SAVFGAME
 			return false;
 		}
 
-		//>> Пометка сервером своей копии класса
+		//>> Пометка сервером себя
 		void MarkServerSelf(bool server_self_interact) { server_self = server_self_interact; }
 		//>> В режиме сервера
 		void SetNetServer(bool status_server) { server = status_server; }
 		//>> В режиме клиента, подключенного к серверу
 		void SetNetClient(bool status_client) { client = status_client; }
-
+		
+		//>> Инициализация класса
 		void Init(const CPlayerCameraF * player_camera, const MATH3DVEC * player_position, const CStatusIO * io_status)
 		{
 			if (player_camera   == nullptr) { _MBM(ERROR_PointerNone); return; }
@@ -190,7 +191,17 @@ namespace SAVFGAME
 
 			isInit = true;
 		}
-		
+		//>> Обновление в новом кадре
+		void Update()
+		{
+			if (!isInit) { _MBM(ERROR_InitNone); return; }
+
+			window_W = IO->window.client_width;
+			window_H = IO->window.client_height;
+
+			PickVecCalc();
+		}
+
 	protected:
 		//>> Расчёт вектора захвата
 		void PickVecCalc()
@@ -214,20 +225,39 @@ namespace SAVFGAME
 			cursor.x = cursor.x / projMatPtr->_11; // _11 = w = 1.0/tan(fov_horiz*0.5);
 			cursor.y = cursor.y / projMatPtr->_22; // _22 = h = 1.0/tan(fov_vert*0.5);
 
+			// обновим локальные оси
+			vecpick_X.x = viewMatPtr->_11;   vecpick_Y.x = viewMatPtr->_12;   vecpick_Z.x = -viewMatPtr->_13;
+			vecpick_X.y = viewMatPtr->_21;   vecpick_Y.y = viewMatPtr->_22;   vecpick_Z.y = -viewMatPtr->_23;
+			vecpick_X.z = viewMatPtr->_31;   vecpick_Y.z = viewMatPtr->_32;   vecpick_Z.z = -viewMatPtr->_33;
+
+			// специальные вектора
+			vecpick_XZ = vecpick_Z + vecpick_X;   vecpick_XZ._normalize();
+			vecpick_ZX = vecpick_Z - vecpick_X;   vecpick_ZX._normalize();
+
 			// вектор захвата
 
+			//M._11 = OX.x;   M._12 = OY.x;   M._13 = OZ.x;
+			//M._21 = OX.y;   M._22 = OY.y;   M._23 = OZ.y;
+			//M._31 = OX.z;   M._32 = OY.z;   M._33 = OZ.z;
+			//
 			//vecpick.x = (cursor.x * viewMatInv._11) + (cursor.y * viewMatInv._21) + viewMatInv._31;
 			//vecpick.y = (cursor.x * viewMatInv._12) + (cursor.y * viewMatInv._22) + viewMatInv._32;
 			//vecpick.z = (cursor.x * viewMatInv._13) + (cursor.y * viewMatInv._23) + viewMatInv._33;
 
-			vecpick.x = (cursor.x * viewMatPtr->_11) + (cursor.y * viewMatPtr->_12) + viewMatPtr->_13;
-			vecpick.y = (cursor.x * viewMatPtr->_21) + (cursor.y * viewMatPtr->_22) + viewMatPtr->_23;
-			vecpick.z = (cursor.x * viewMatPtr->_31) + (cursor.y * viewMatPtr->_32) + viewMatPtr->_33;
+			//vecpick.x = (cursor.x * viewMatPtr->_11) + (cursor.y * viewMatPtr->_12) + viewMatPtr->_13;
+			//vecpick.y = (cursor.x * viewMatPtr->_21) + (cursor.y * viewMatPtr->_22) + viewMatPtr->_23;
+			//vecpick.z = (cursor.x * viewMatPtr->_31) + (cursor.y * viewMatPtr->_32) + viewMatPtr->_33;
+			// исходно вектор направлен назад, поэтому развернём вперёд
+			//vecpick *= -1;
+
+			vecpick.x = (cursor.x * vecpick_X.x) + (cursor.y * vecpick_Y.x) + vecpick_Z.x;
+			vecpick.y = (cursor.x * vecpick_X.y) + (cursor.y * vecpick_Y.y) + vecpick_Z.y;
+			vecpick.z = (cursor.x * vecpick_X.z) + (cursor.y * vecpick_Y.z) + vecpick_Z.z;
+
+			vecpick._normalize();
 
 			posself = *playerPos;
 			pospick = vecpick + posself;
-
-			recalcvec = false;
 		}
 		//>> Проверка взгляда на объект модели
 		bool Pick(const CModel * mdl, const WPOS * wPos)
@@ -246,14 +276,12 @@ namespace SAVFGAME
 			MATH3DMATRIX  worldMat, worldMatBack;
 			float det;
 
-			if (recalcvec) PickVecCalc();
-
 			MathWorldMatrix(wPos->P, wPos->Q, wPos->S, worldMat);
 		//	MathWorldMatrixBack( wPos->P, wPos->A, wPos->S, worldMatBack );
 
 			// Эта матрица понадобится при обратной конвертации точки пересечения
-			MathInverseMatrix(worldMat, det, worldMatBack);								if (!det) return false; //_MBM(ERROR_MatrixDetNull);
-
+			MathInverseMatrix(worldMat, det, worldMatBack);								if (!det) { //wprintf(L"\n%s", ERROR_MatrixDetNull); //_MBM(ERROR_MatrixDetNull); 
+			                                                                                        return false; }
 			MATH3DVEC pMin, pMax, pBox[8];
 
 			for (int i = 0; i < 8; i++)
@@ -273,7 +301,7 @@ namespace SAVFGAME
 				else if (pBox[i].z < pMin.z) pMin.z = pBox[i].z;
 			}
 
-			bool result = true;
+			bool  result = true;
 			bool bresult = false;
 
 			// Проверка, что смотрим вперёд
@@ -281,7 +309,7 @@ namespace SAVFGAME
 			MATH3DVEC mpos = wPos->P;	//_VECSET(wPos, mpos);
 			MATH3DVEC dist_vec = posself - mpos;
 			float fcos = MathDotVec(vecpick, dist_vec);
-			if (fcos > 0) result = false;
+			if (fcos < 0) result = false;
 
 			MATH3DVEC pOutMem, pOutCur;
 
@@ -462,40 +490,6 @@ namespace SAVFGAME
 			wPos->y += dX * cosXY + dY * cosYY;
 			wPos->z += dX * cosXZ + dY * cosYZ;
 		}
-		//>> Обновление связанных данных
-		void CheckRecalcVec()
-		{
-			if (IO == nullptr) { _MBM(ERROR_PointerNone);  return; }
-
-			if (nextframe)
-			{
-				recalcvec = true;
-				nextframe = false;
-
-				window_W = IO->window.client_width;
-				window_H = IO->window.client_height;
-			}
-
-		/*	if ( camera->GetMouseDX() ||
-				 camera->GetMouseDY() )
-			{
-				recalcvec = true; return;
-			}
-
-			if ( posself != *playerPos )
-			{
-				recalcvec = true; return;
-			}
-
-			if ( window_W != IO->window.client_width  ||
-				 window_H != IO->window.client_height )
-			{
-				window_W = IO->window.client_width;
-				window_H = IO->window.client_height;
-
-				recalcvec = true; return;
-			} //*/
-		}
 		//>> Управление объектами сцены :: поиск pickedID
 		uint64 PickProc(CGameMap * map)
 		{
@@ -505,17 +499,19 @@ namespace SAVFGAME
 			// Подсчитаем сколько в данный момент объектов доступны и интерактивны //
 
 			for (auto & o : map->obj.model)
-				if (o->dynamic && o->enable && o->pick)
-					pickable_count++;
+				if (o->dynamic && o->pick)
+					if (o->IsObjEnabled())
+						pickable_count++;
 
 			// Проверим удалённость объектов от игрока //
 
 			vector<pair<float, uint64>> distance;	// std::map <float, uint64>
-			distance.reserve(pickable_count);
+			distance.reserve((size_t)pickable_count);
 
 			i = 0;
 			for (auto & o : map->obj.model)											{
-				if (o->dynamic && o->enable && o->pick)							{
+				if (o->dynamic && o->pick)
+				if (o->IsObjEnabled())											{
 					float dist = o->GetDistTo(playerPos);
 					if (dist <= map->setup.maxpickdist)
 						distance.emplace_back(pair<float, uint64>(dist, i));	}
@@ -558,8 +554,6 @@ namespace SAVFGAME
 			status = mode;  // eInteractMode ret = mode;
 
 			if (!map->setup.pickmode) return status = INTMODE_NONE; // if disallowed by map settings
-
-			CheckRecalcVec();
 
 			bool status_in_view = true;
 
@@ -621,15 +615,91 @@ namespace SAVFGAME
 
 			return status;
 		}
-		//>> Проверка, что объект виден
-		bool CheckVisibility(const WPOS * model)
+	public:
+		//>> Возвращает COS угла между видом от курсора и положением объекта
+		void GetVecpickCos(const WPOS * obj_position, float & cos_out)
 		{
-			if (recalcvec) PickVecCalc();
+			if (obj_position == nullptr) { _MBM(ERROR_PointerNone); return; }
 
-			float fcos = MathDotVec(vecpick, *cameraPos - model->P);
-			if (fcos > 0) return false;
-			else return true;
+			MATH3DVEC vec(*cameraPos - obj_position->P);
+
+			vec._normalize();
+
+			cos_out = MathDotVec(vecpick, vec);
 		}
+		//>> Возвращает COS угла между осью вида влево и положением объекта
+		void GetVecpickCosX(const WPOS * obj_position, float & cos_out)
+		{
+			if (obj_position == nullptr) { _MBM(ERROR_PointerNone); return; }
+
+			MATH3DVEC vec(*cameraPos - obj_position->P);
+
+			vec._normalize();
+
+			cos_out = MathDotVec(vecpick_X, vec);
+		}
+		//>> Возвращает COS угла между осью вида вверх и положением объекта
+		void GetVecpickCosY(const WPOS * obj_position, float & cos_out)
+		{
+			if (obj_position == nullptr) { _MBM(ERROR_PointerNone); return; }
+
+			MATH3DVEC vec(*cameraPos - obj_position->P);
+
+			vec._normalize();
+
+			cos_out = MathDotVec(vecpick_Y, vec);
+		}
+		//>> Возвращает COS угла между осью вида вперёд и положением объекта
+		void GetVecpickCosZ(const WPOS * obj_position, float & cos_out)
+		{
+			if (obj_position == nullptr) { _MBM(ERROR_PointerNone); return; }
+
+			MATH3DVEC vec(*cameraPos - obj_position->P);
+
+			vec._normalize();
+
+			cos_out = MathDotVec(vecpick_Z, vec);
+		}
+		//>> Возвращает COS угла между осью 45 град. влево и положением объекта
+		void GetVecpickCosXZ(const WPOS * obj_position, float & cos_out)
+		{
+			if (obj_position == nullptr) { _MBM(ERROR_PointerNone); return; }
+
+			MATH3DVEC vec(*cameraPos - obj_position->P);
+
+			vec._normalize();
+
+			cos_out = MathDotVec(vecpick_XZ, vec);
+		}
+		//>> Возвращает COS угла между осью 45 град. вправо и положением объекта
+		void GetVecpickCosZX(const WPOS * obj_position, float & cos_out)
+		{
+			if (obj_position == nullptr) { _MBM(ERROR_PointerNone); return; }
+
+			MATH3DVEC vec(*cameraPos - obj_position->P);
+
+			vec._normalize();
+
+			cos_out = MathDotVec(vecpick_ZX, vec);
+		}
+	public:
+		//>> Проверка, что объект виден
+		bool CheckVisibility(const WPOS * model_position)
+		{
+			// простой вариант без учёта FOV и размеров модели
+			{
+				float fcos;
+				GetVecpickCosZ(model_position, fcos);
+
+				if (fcos < 0)
+					 return false;
+				else return true;
+			}
+		}
+		
+
+	public:
+		
 	};
 
 }

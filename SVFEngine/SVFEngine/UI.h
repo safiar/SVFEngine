@@ -55,6 +55,8 @@
 #define  BASE_SCREEN_WIDTH  1024	// default
 #define  BASE_SCREEN_HEIGHT 768		// default
 
+#define  BASE_UI_SOUND_GROUP 1
+
 namespace SAVFGAME
 {
 	enum eUIFontID
@@ -78,10 +80,8 @@ namespace SAVFGAME
 		UISOUND_LOADING,			// loading screen (loop)
 		UISOUND_TARGETED,			// if targeted on screen
 		UISOUND_CLICKED,			// if clicked on screen
-
 		UISOUND_CHAT_INCOMING,		// incoming chat message
-
-		UISOUND_WAKEDREAM_TEST,		// test
+	//	UISOUND_WAKEDREAM_TEST,		// test
 
 		UISOUND_ENUM_MAX
 	};
@@ -113,12 +113,13 @@ namespace SAVFGAME
 		uint32						base_screen_W { BASE_SCREEN_WIDTH  }; // виртуальный проторазмер окна
 		uint32						base_screen_H { BASE_SCREEN_HEIGHT }; // виртуальный проторазмер окна
 	protected:
-		VECDATAP   <CFontR>			font;				 // шрифты
-		shared_ptr <CTexProfileR>	base_shr;			 // графические элементы
-		shared_ptr <CSound>			sound_shr;			 // звуковые эффекты
-		CTexProfileR *				base    { nullptr }; // графические элементы
-		CSound *					sound   { nullptr }; // звуковые эффекты
-		CStatusNetwork *			net     { nullptr }; // статус сети
+		VECDATAP   <CFontR>			font;				  // шрифты
+		shared_ptr <CTexProfileR>	base_shr;			  // графические элементы
+		shared_ptr <CSound>			sound_shr;			  // звуковые эффекты
+		CTexProfileR *				base     { nullptr }; // графические элементы
+		CSound *					sound    { nullptr }; // звуковые эффекты
+		vector <uint64_gid>         sound_id;             // звуковые эффекты (eUISoundID IDs)
+		CStatusNetwork *			net      { nullptr }; // статус сети
 		CFontR *					font_default { nullptr };
 	public:
 		CUIBase(const CUIBase& src)				= delete;
@@ -159,7 +160,7 @@ namespace SAVFGAME
 		};
 		//>> Will not affected to already loaded interface
 		void InitUI(const CShader * pShader, const CStatusIO * io, const CStatusNetwork * pNetStatus,
-			VECDATAP<CFontR> & vecFont, shared_ptr<CTexProfileR> pTexbase, shared_ptr<CSound> pSound)
+			VECDATAP<CFontR> & vecFont, shared_ptr<CTexProfileR> pTexbase, const CSound * pSound)
 		{
 			if (isInit) return;
 
@@ -169,6 +170,8 @@ namespace SAVFGAME
 			if (!SetTexBase(pTexbase)) return;
 			if (!SetSound(pSound)) return;
 			if (!SetNetwork(pNetStatus)) return;
+
+			SetSoundIDs();
 
 			isInit = true;
 		}
@@ -212,11 +215,10 @@ namespace SAVFGAME
 			return true;
 		}
 		//>> Установка звуков
-		bool SetSound(shared_ptr<CSound> pSound)
+		bool SetSound(const CSound * pSound)
 		{
 			if (pSound == nullptr) { _MBM(ERROR_PointerNone); return false; }
-			sound_shr = pSound;
-			sound = sound_shr.get();
+			sound = const_cast<CSound*>(pSound);
 			return true;
 		}
 		//>> Для определения текущего статуса сети (клиент/сервер)
@@ -225,6 +227,38 @@ namespace SAVFGAME
 			if (pNetStatus == nullptr) { _MBM(ERROR_PointerNone); return false; }
 			net = const_cast<CStatusNetwork*>(pNetStatus);
 			return true;
+		}
+		//>> Определение фактических GID звуков
+		void SetSoundIDs()
+		{
+			error_t     hRes;
+			wstring     sound_formal_name;
+			uint64_gid  GID;
+
+			sound_id.resize(eUISoundID::UISOUND_ENUM_MAX);
+
+			for (uint32 i = 0; i < UISOUND_ENUM_MAX; i++)
+			{
+				sound_id[i].element = eSoundGroup_ELEMENT_MAX;
+				sound_id[i].group   = eSoundGroup_USER_MAX;
+
+				switch (i)
+				{
+					case UISOUND_LOADING:       sound_formal_name = L"UISOUND_LOADING";       break;
+					case UISOUND_TARGETED:      sound_formal_name = L"UISOUND_TARGETED";      break;
+					case UISOUND_CLICKED:       sound_formal_name = L"UISOUND_CLICKED";       break;
+					case UISOUND_CHAT_INCOMING: sound_formal_name = L"UISOUND_CHAT_INCOMING"; break;
+					default:
+						continue;
+				}
+
+				hRes = sound->FormalNameFind(sound_id[i], sound_formal_name);
+
+				if (hRes != eSoundError_TRUE)
+				{
+					wprintf(L"\nUI error : can't find sound with formal name %s", sound_formal_name.c_str());
+				}
+			}
 		}
 	public:
 		//>> TEST: (Временно) Для внешнего пользования звуковой базой UI
@@ -405,7 +439,7 @@ namespace SAVFGAME
 		bool		escape_menu        { false };	// статус включения
 	protected:
 		CUIEscapeMenu() : CUIBase() { }
-		virtual ~CUIEscapeMenu() { Close(); }
+		virtual ~CUIEscapeMenu()  override { Close(); }
 	private:
 		void Init()
 		{
@@ -506,10 +540,11 @@ namespace SAVFGAME
 				}
 			}
 
+			const uint32 eSRS = eSoundRunAsync;// | eSoundRunMix;
 			switch (status)
 			{
-			case CLICK_TARGETED: sound->PlayThread(UISOUND_TARGETED, 1, 0); return CLICK_EVENT_NONE;
-			case CLICK_CLICKED:  sound->PlayThread(UISOUND_CLICKED,  1, 0); return user_command;
+			case CLICK_TARGETED: sound->RunThreadPlay(sound_id[UISOUND_TARGETED], eSRS); return CLICK_EVENT_NONE;
+			case CLICK_CLICKED:  sound->RunThreadPlay(sound_id[UISOUND_CLICKED],  eSRS); return user_command;
 			}
 
 			return CLICK_EVENT_NONE;
@@ -548,7 +583,7 @@ namespace SAVFGAME
 		{
 			text = new CText;
 		}
-		virtual ~CUIMonitorFPS()
+		virtual ~CUIMonitorFPS() override
 		{
 			Close();
 			_DELETE(text);
@@ -666,12 +701,12 @@ namespace SAVFGAME
 			if (ret)
 			{
 				loading_thread.Join(true);
-				loading_call = false;
-				loading_screen = false;
+				loading_call    = false;
+				loading_screen  = false;
 				loading_mapname = L"MISSING MAP NAME TO LOAD";	// сброс
-				loading_mapid = 0;								// сброс
+				loading_mapid   = 0;							// сброс
 
-				sound->InterruptSound(UISOUND_LOADING);  // завершаем фоновый звук
+				sound->ControlInterrupt(sound_id[UISOUND_LOADING], true);  // завершаем фоновый звук
 			}
 			return ret;
 		}
@@ -687,8 +722,8 @@ namespace SAVFGAME
 				loading_mapname = L"MISSING MAP NAME TO LOAD";	// сброс
 				loading_mapid = 0;								// сброс
 
-				sound->InterruptSound(MISSING);                        // прерываем прочие
-				sound->PlayThread(UISOUND_LOADING, false, true, 10.f); // играем фоновый звук
+				sound->ControlInterrupt(SOUND_ALL, true);                       // прерываем прочие
+				sound->RunThreadPlay(sound_id[UISOUND_LOADING], eSoundRunLoop); // играем фоновый звук
 			}
 			else _MBM(ERROR_THREAD);
 			return (ret == TC_SUCCESS);
@@ -719,7 +754,7 @@ namespace SAVFGAME
 			loading_mapname = L"MISSING MAP NAME TO LOAD";
 			text.Create(4);
 		}
-		virtual ~CUILoadingScreen()
+		virtual ~CUILoadingScreen() override
 		{
 			Close();
 			text.Delete(true);
@@ -937,7 +972,7 @@ namespace SAVFGAME
 			history = new CText;
 			message = new CText;
 		}
-		virtual ~CUIChatWindow()
+		virtual ~CUIChatWindow() override
 		{
 			Close();
 			_DELETE(history);
@@ -1068,7 +1103,7 @@ namespace SAVFGAME
 
 			ChatHistoryUpdate();
 			if (show_passively) ChatPassiveMode();
-			if (incoming_sound) sound->PlayThread(UISOUND_CHAT_INCOMING, false, false);
+			if (incoming_sound) sound->RunThreadPlay(sound_id[UISOUND_CHAT_INCOMING], eSoundRunNONE);
 		}
 		void ChatHistoryAppend(const wchar_t * text, bool show_passively, bool incoming_sound)
 		{
@@ -1087,7 +1122,7 @@ namespace SAVFGAME
 
 			ChatHistoryUpdate();
 			if (show_passively) ChatPassiveMode();
-			if (incoming_sound) sound->PlayThread(UISOUND_CHAT_INCOMING, false, false);
+			if (incoming_sound) sound->RunThreadPlay(sound_id[UISOUND_CHAT_INCOMING], eSoundRunNONE);
 		}
 		void ChatHistorySet(const wstring & text, bool show_passively, bool incoming_sound)
 		{
@@ -1104,7 +1139,7 @@ namespace SAVFGAME
 			
 			ChatHistoryUpdate();
 			if (show_passively) ChatPassiveMode();
-			if (incoming_sound) sound->PlayThread(UISOUND_CHAT_INCOMING, false, false);
+			if (incoming_sound) sound->RunThreadPlay(sound_id[UISOUND_CHAT_INCOMING], eSoundRunNONE);
 		}
 		void ChatHistorySet(const wchar_t * text, bool show_passively, bool incoming_sound)
 		{
@@ -1121,7 +1156,7 @@ namespace SAVFGAME
 
 			ChatHistoryUpdate();
 			if (show_passively) ChatPassiveMode();
-			if (incoming_sound) sound->PlayThread(UISOUND_CHAT_INCOMING, false, false);
+			if (incoming_sound) sound->RunThreadPlay(sound_id[UISOUND_CHAT_INCOMING], eSoundRunNONE);
 		}
 	private:
 		wstring * ChatGetHistoryPreparedText(wstring & message, const uint32 max_width, CBaseFont * font, CText * text) const
@@ -1390,7 +1425,7 @@ namespace SAVFGAME
 			rotate = new CText;
 			move   = new CText;
 		}
-		virtual ~CUITipInteractPick()
+		virtual ~CUITipInteractPick() override
 		{
 			Close();
 			_DELETE(rotate);
@@ -1540,7 +1575,7 @@ namespace SAVFGAME
 		const float menu_cursor_scale_y = 0.5f;
 	protected:
 		CUICursorsManager() : CUIBase(), isInit(false) {}
-		virtual ~CUICursorsManager() { Close(); }
+		virtual ~CUICursorsManager() override { Close(); }
 	private:
 		void Init()
 		{
@@ -1617,7 +1652,7 @@ namespace SAVFGAME
 		{
 			text_help = new CText;
 		}
-		virtual ~CUICustomVarious()
+		virtual ~CUICustomVarious() override
 		{
 			Close();
 			text.Delete(1);
@@ -1737,7 +1772,7 @@ namespace SAVFGAME
 		{
 			ping = new CText;
 		}
-		virtual ~CUINetworkPing()
+		virtual ~CUINetworkPing() override
 		{
 			Close();
 			_DELETE(ping);
@@ -1855,7 +1890,7 @@ namespace SAVFGAME
 	public:
 		CBaseInterface() : CUIEscapeMenu(), CUIMonitorFPS(), CUILoadingScreen(), CUIChatWindow(), CUICustomVarious(), CUITipInteractPick(),
 			CUICursorsManager(), CUINetworkPing() {};
-		~CBaseInterface() { Close(); };
+		~CBaseInterface() override final { Close(); };
 
 		void Close() override final
 		{

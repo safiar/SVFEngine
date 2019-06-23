@@ -2,7 +2,7 @@
 //
 // MODULE  : InputAnswers.h
 //
-// PURPOSE : Интерфейс класса ответов на события окна
+// PURPOSE : Интерфейс класса ответов на события
 //
 // CREATED : SavF. ⚡ Savenkov Filipp A. (2017)
 //
@@ -46,17 +46,17 @@ namespace SAVFGAME
 		eKeyBoard key;
 	};
 	
-	class CInputAnswers // virtual base class : определяет ответы на события окна
+	class CInputAnswers
 	{
 	public:
 		CInputAnswers(){};
 		virtual ~CInputAnswers(){};
-		virtual bool MouseMoved    (const MousePos        & arg)	{ return false; }
-		virtual bool MousePressed  (const MouseButton     & arg)	{ return false; }
-		virtual bool MouseReleased (const MouseButton     & arg)	{ return false; }
-		virtual bool MouseWheeled  (const MouseWheel      & arg)	{ return false; }
-		virtual bool KeyPressed    (const KeyboardButton  & arg)	{ return false; }
-		virtual bool KeyReleased   (const KeyboardButton  & arg)	{ return false; }
+		virtual bool MouseMoved    (const MousePos        & arg) = 0;
+		virtual bool MousePressed  (const MouseButton     & arg) = 0;
+		virtual bool MouseReleased (const MouseButton     & arg) = 0;
+		virtual bool MouseWheeled  (const MouseWheel      & arg) = 0;
+		virtual bool KeyPressed    (const KeyboardButton  & arg) = 0;
+		virtual bool KeyReleased   (const KeyboardButton  & arg) = 0;
 	};
 }
 

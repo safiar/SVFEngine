@@ -59,6 +59,7 @@ namespace SAVFGAME
 			: CObject(pos),  height(_height), color1(RGBA), color2(RGBA),   UI(_UI), pos(CObject::pos)	{ text=_text; Init(); };
 		CText( wchar_t* _text, float _height, WPOS pos, COLORVEC RGBA, COLORVEC RGBA_2, bool _UI)
 			: CObject(pos),  height(_height), color1(RGBA), color2(RGBA_2), UI(_UI), pos(CObject::pos)	{ text=_text; Init(); gradient=1; };
+		~CText() override final {};
 		///////////////////////// Operators /////////////////////////
 		CText& operator=(const wchar_t * uitext)
 		{
@@ -105,7 +106,7 @@ namespace SAVFGAME
 		}
 		///////////////////////// Font render manager block /////////////////////////
 	protected:
-		struct CTextCID /* Данный блок используется в рендер части класса шрифта для управления редко меняющимися текстами */
+		struct CTextCID // Данный блок используется в render-части класса шрифта для управления редко меняющимися текстами
 		{
 			CTextCID() : constant_ID(MISSING), font_ID(NULL), font_iteration(MISSING) {}
 			//////////////////

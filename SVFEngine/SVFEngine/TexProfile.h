@@ -891,8 +891,8 @@ namespace SAVFGAME
 		{
 			if (isInit) { _MBM(ERROR_InitAlready); return false; }
 
-			wchar_t syspath[256], error[256], p1[256], p2[256];
-			GetCurrentDirectory(256, syspath);
+			wchar_t syspath[MAX_PATH], error[MAX_PATH * 2], p1[MAX_PATH], p2[MAX_PATH];
+			GetCurrentDirectory(MAX_PATH, syspath);
 
 			wchar_t *p = nullptr;
 
@@ -900,7 +900,9 @@ namespace SAVFGAME
 			wsprintf(p1, L"%s\\%s\\%s", gamePath, directSubPath, filename);
 			wsprintf(p2, L"%s\\%s\\%s", syspath, directSubPath, filename);
 
-			if (p = LoadFileCheck(2, p1, p2)) return isInit = LoadProc(p);
+		//	if (p = LoadFileCheck(2, p1, p2))
+			if (p = LoadFileCheck( { p1, p2 } ))
+				 return isInit = LoadProc(p);
 			else _MBM(error);
 
 			return false;
