@@ -1,0 +1,4 @@
+# Turn off CRLF auto-replace
+
+*.txt binary
+*.ini binary
