@@ -1,12 +1,17 @@
 # Turn off CRLF auto-replace in files :
+# 
+# *.txt binary
+# *.ini binary
+# *.mtl binary
+# *.cpp binary
+# *.h   binary
+# *.exe binary
 
-*.txt binary
-*.ini binary
-*.mtl binary
-
+*.obj binary
+*.*   binary
 
 
 # Auto-replace to CRLF as default
-
-* text eol=crlf
+# 
+# * text eol=crlf
 
