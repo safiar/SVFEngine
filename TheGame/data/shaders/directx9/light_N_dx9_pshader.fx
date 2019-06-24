@@ -8,7 +8,7 @@
 //           - Distance disappearing
 //           - Fog control
 //
-// CREATED : SavF. | Savenkov Filipp A. (2017)
+// CREATED : SavF. | Savenkov Filipp A. (2017) 
 //
 // ----------------------------------------------------------------------- //
 

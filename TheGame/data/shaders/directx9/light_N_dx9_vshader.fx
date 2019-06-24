@@ -6,7 +6,7 @@
 //           - Parallax normal mapping
 //           - Environment reflecting
 //
-// CREATED : SavF. | Savenkov Filipp A. (2017)
+// CREATED : SavF. | Savenkov Filipp A. (2017) 
 //
 // ----------------------------------------------------------------------- //
 
