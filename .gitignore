@@ -3,7 +3,7 @@ sh.exe.stackdump
 *.pdb
 *.ilk
 *.DMP
-*.obj
+SVFEngine/*/*.obj
 *.tlog
 *.suo
 *.sdf
