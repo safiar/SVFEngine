@@ -1,4 +1,12 @@
-# Turn off CRLF auto-replace
+# Turn off CRLF auto-replace in files :
 
 *.txt binary
 *.ini binary
+*.mtl binary
+
+
+
+# Auto-replace to CRLF as default
+
+* text eol=crlf
+
