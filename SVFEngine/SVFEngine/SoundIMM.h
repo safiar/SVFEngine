@@ -824,7 +824,7 @@ namespace SAVFGAME
 			case eSDTypeRender:  SDProp = &propRenderDevice;  break;
 			case eSDTypeCapture: SDProp = &propCaptureDevice; break;
 			default: 
-				_MBM(L"Incorrect eSoundDevType [ReadDeviceProprety]");
+				wprintf(L"\nIncorrect eSoundDevType [ReadDeviceProprety]");
 				return false;
 			}
 
@@ -837,9 +837,9 @@ namespace SAVFGAME
 			//////////////////////////////////////////
 
 			if (S_OK != pEnumerator->GetDevice(DEV.ID.c_str(), &pDevice))
-				_MBM(L"Не удалось pEnumerator->GetDevice()");
+				wprintf(L"\nНе удалось pEnumerator->GetDevice()");
 			if (S_OK != pDevice->OpenPropertyStore(STGM_READ, &pPropertyStore))
-				_MBM(L"Не удалось OpenPropertyStore()");
+				wprintf(L"\nНе удалось OpenPropertyStore()");
 					
 			//////// String types : VT_LPWSTR ////////
 
@@ -852,47 +852,47 @@ namespace SAVFGAME
 				{
 				case eSDPFriendlyName:
 					if (S_OK != pPropertyStore->GetValue(PKEY_Device_FriendlyName, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ FriendlyName");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ FriendlyName");
 					wstr = & DEV.name;
 					break;
 				case eSDPFriendlyNameI:
 					if (S_OK != pPropertyStore->GetValue(PKEY_DeviceInterface_FriendlyName, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ InterfaceFriendlyName");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ InterfaceFriendlyName");
 					wstr = & DEV.iname;
 					break;
 				case eSDPInfoDescription:
 					if (S_OK != pPropertyStore->GetValue(PKEY_Device_DeviceDesc, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ DeviceDesc");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ DeviceDesc");
 					wstr = & DEV.info;
 					break;
 				case eSDPEndAssociation:
 					if (S_OK != pPropertyStore->GetValue(PKEY_AudioEndpoint_Association, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ Association");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ Association");
 					wstr = & DEV.assoc;
 					break;
 				case eSDPPageProvider:
 					if (S_OK != pPropertyStore->GetValue(PKEY_AudioEndpoint_ControlPanelPageProvider, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ PageProvider");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ PageProvider");
 					wstr = & DEV.pageProv;
 					break;
 				case eSDPguid:
 					if (S_OK != pPropertyStore->GetValue(PKEY_AudioEndpoint_GUID, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ GUID");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ GUID");
 					wstr = & DEV.GUID;
 					break;
 				case eSDPJackSubType:
 					if (S_OK != pPropertyStore->GetValue(PKEY_AudioEndpoint_JackSubType, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ JackSubType");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ JackSubType");
 					wstr = & DEV.jackSType;
 					break;
 				case eSDPEnumeratorName:
 					if (S_OK != pPropertyStore->GetValue(PKEY_Device_EnumeratorName, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ EnumeratorName");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ EnumeratorName");
 					wstr = & DEV.enumarName;
 					break;
 				case eSDPIconPath:
 					if (S_OK != pPropertyStore->GetValue(PKEY_DeviceClass_IconPath, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ IconPath");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ IconPath");
 					wstr = & DEV.iconPath;
 					break;
 				}
@@ -923,12 +923,12 @@ namespace SAVFGAME
 				{
 				case eSDPShareModeFormat:
 					if (S_OK != pPropertyStore->GetValue(PKEY_AudioEngine_DeviceFormat, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ DeviceFormat");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ DeviceFormat");
 					DevMode = & DEV.modeShared;
 					break;
 				case eSDPDefaultFormat:
 					if (S_OK != pPropertyStore->GetValue(PKEY_AudioEngine_OEMFormat, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ OEMFormat");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ OEMFormat");
 					DevMode = & DEV.modeDefault;
 					break;
 				}
@@ -1074,35 +1074,35 @@ namespace SAVFGAME
 				{
 				case eSDPSysFXState:
 					if (S_OK != pPropertyStore->GetValue(PKEY_AudioEndpoint_Disable_SysFx, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ SysFx");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ SysFx");
 					//((propVar.vt & VT_TYPEMASK) != VT_UI4)
 					if (propVar.vt == VT_UI4)
 						DEV.bSysFX = _BOOL(propVar.ulVal);
 					break;
 				case eSDPFormFactor:
 					if (S_OK != pPropertyStore->GetValue(PKEY_AudioEndpoint_FormFactor, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ FormFactor");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ FormFactor");
 					//((propVar.vt & VT_TYPEMASK) == VT_UI4)
 					if (propVar.vt == VT_UI4)
 						DefineFormFactor_proc(propVar.uintVal);
 					break;
 				case eSDPRangeFull:
 					if (S_OK != pPropertyStore->GetValue(PKEY_AudioEndpoint_FullRangeSpeakers, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ FullRangeSpeakers");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ FullRangeSpeakers");
 					//((propVar.vt & VT_TYPEMASK) == VT_UI4)
 					if (propVar.vt == VT_UI4)
 						DefineRange_proc(propVar.uintVal, false);
 					break;
 				case eSDPRangePhys:
 					if (S_OK != pPropertyStore->GetValue(PKEY_AudioEndpoint_PhysicalSpeakers, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ PhysicalSpeakers");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ PhysicalSpeakers");
 					//((propVar.vt & VT_TYPEMASK) == VT_UI4)
 					if (propVar.vt == VT_UI4)
 						DefineRange_proc(propVar.uintVal, true);
 					break;
 				case eSDPEventDrivenMode:
 					if (S_OK != pPropertyStore->GetValue(PKEY_AudioEndpoint_Supports_EventDriven_Mode, &propVar))
-						_MBM(L"Не удалось pPropertyStore->GetValue() _ EventDrivenMode");
+						wprintf(L"\nНе удалось pPropertyStore->GetValue() _ EventDrivenMode");
 					//((propVar.vt & VT_TYPEMASK) == VT_UI4)
 					if (propVar.vt == VT_UI4)
 						DEV.bEvDrvMode = _BOOL(propVar.uintVal);
