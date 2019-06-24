@@ -4,7 +4,7 @@
 //
 // PURPOSE : Шейдер неба
 //
-// CREATED : SavF. | Savenkov Filipp A. (2017)
+// CREATED : SavF. | Savenkov Filipp A. (2017) 
 //
 // ----------------------------------------------------------------------- //
 
