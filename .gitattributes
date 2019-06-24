@@ -3,10 +3,13 @@
 *.txt binary
 *.ini binary
 *.mtl binary
-
+*.cpp binary
+*.h   binary
+*.exe binary
+*.*   binary
 
 
 # Auto-replace to CRLF as default
-
-* text eol=crlf
+# 
+# * text eol=crlf
 
