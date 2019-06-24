@@ -6,8 +6,8 @@
 # *.cpp binary
 # *.h   binary
 # *.exe binary
-# *.obj binary
 
+*.obj binary
 *.*   binary
 
 
