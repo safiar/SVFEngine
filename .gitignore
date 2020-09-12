@@ -7,10 +7,12 @@ SVFEngine/*/*.obj
 *.tlog
 *.suo
 *.sdf
+*.opensdf
 SVFEngine/x64/Debug/*.*
 SVFEngine/x64/Debug/*/*.*
 SVFEngine/x64/Release/*.*
 SVFEngine/x64/Release/*/*.*
 SVFEngine/SVFEngine/x64/*.*
 SVFEngine/SVFEngine/x64/*/*.*
+SVFEngine/.vs/*
 SVFEngine/__ignore/*.*

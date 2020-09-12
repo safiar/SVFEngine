@@ -142,6 +142,13 @@ namespace SAVFGAME
 			case eSDTypeRender:
 				{
 					glock lock(m_updateRender);
+					if (!devRender || _ISMISS(numRenderDefault))
+					{
+						//printf("\nERROR : GetDevice() eSDTypeRender : device missing");
+						pDevice = nullptr;
+						modeShared.Reset();
+						break;
+					}
 					pDevice = devRender;
 					modeShared = propRenderDevice[numRenderDefault].modeShared;
 					break;
@@ -149,6 +156,13 @@ namespace SAVFGAME
 			case eSDTypeCapture:
 				{
 					glock lock(m_updateCapture);
+					if (!devCapture || _ISMISS(numCaptureDefault))
+					{
+						//printf("ERROR : GetDevice() eSDTypeCapture : device missing");
+						pDevice = nullptr;
+						modeShared.Reset();
+						break;
+					}
 					pDevice = devCapture;
 					modeShared = propCaptureDevice[numCaptureDefault].modeShared;
 					break;
@@ -602,21 +616,49 @@ namespace SAVFGAME
 
 				// Получим указатели на интерфейсы устройств по умолчанию и выясним их порядковые номера i в списках
 
-				if (S_OK != pEnumerator->GetDefaultAudioEndpoint(
-					flow,
-					role, 
-					& pDevice))
-				_MBM(L"Не удалось GetDefaultAudioEndpoint()");
-
-				pDevice->GetId(&devID);
-				for (UINT i=0; i<numDevices; i++)
-					if (!(*prop)[i].ID.compare(devID))
+				HRESULT defaultAudioResult = pEnumerator->GetDefaultAudioEndpoint(flow, role, &pDevice);
+				if (S_OK != defaultAudioResult)
+				{
+					std::string log, info, infoflow;
+					switch (defaultAudioResult)
 					{
-						(*numDevDefault) = i;
+					case E_POINTER:
+						info = "Parameter ppDevice is NULL.";
 						break;
-					};
-				CoTaskMemFree(devID);
-				_RELEASE(pDevice);
+					case E_INVALIDARG:
+						info = "Parameter dataFlow or role is out of range.";
+						break;
+					case E_OUTOFMEMORY:
+						info = "Out of memory.";
+						break;
+					default:
+						if (defaultAudioResult == E_NOTFOUND)
+							 info = "No device is available.";
+						else info = "Unknown error.";
+					}
+
+					if (flow == RENDER_DEVICE_FLOW)  infoflow = "audio render device";
+					if (flow == CAPTURE_DEVICE_FLOW) infoflow = "audio capture device";
+
+					log = FormatString(512, "\nERROR %08X : GetDefaultAudioEndpoint() : %s not found\nERROR description: %s",
+						defaultAudioResult, infoflow.c_str(), info.c_str());
+
+					printf(log.c_str());
+				}
+
+
+				if (pDevice)
+				{
+					pDevice->GetId(&devID);
+					for (UINT i = 0; i<numDevices; i++)
+						if (!(*prop)[i].ID.compare(devID))
+						{
+							(*numDevDefault) = i;
+							break;
+						};
+					CoTaskMemFree(devID);
+					_RELEASE(pDevice);
+				}
 
 				// Добавить проверку, что numDevDefault не MISSING ?
 				
@@ -654,6 +696,7 @@ namespace SAVFGAME
 			if (type & eSDTypeRender)
 			{
 				_RELEASE(devRender);
+				if (_NOMISS(numRenderDefault))
 				if (S_OK != pEnumerator->GetDevice(propRenderDevice[numRenderDefault].ID.c_str(), &devRender))
 					{ _MBM(L"Не удалось pEnumerator->GetDevice()"); return false; }
 			}
@@ -661,6 +704,7 @@ namespace SAVFGAME
 			if (type & eSDTypeCapture)
 			{
 				_RELEASE(devCapture);
+				if (_NOMISS(numCaptureDefault))
 				if (S_OK != pEnumerator->GetDevice(propCaptureDevice[numCaptureDefault].ID.c_str(), &devCapture))
 					{ _MBM(L"Не удалось pEnumerator->GetDevice()"); return false; }
 			}
@@ -1416,6 +1460,8 @@ namespace SAVFGAME
 			WSTR_out = L"";
 
 			#define _ENDGOOUT ; if (WSTR_out.compare(L"")) return ;
+
+			auto x = PKEY_Device_FriendlyName;
 
 			#define _PKEYTOSTR(key)	if (_BOOL(PID_in == key)) WSTR_out = L"" \
 																		TOWSTRING(key); else
@@ -2289,7 +2335,7 @@ namespace SAVFGAME
 			_PKEYTOSTR(PKEY_StorageProviderFileVersion)
 			_PKEYTOSTR(PKEY_StorageProviderId)
 			_PKEYTOSTR(PKEY_StorageProviderShareStatuses)
-			_PKEYTOSTR(PKEY_StorageProviderSharingStatus)
+		//	_PKEYTOSTR(PKEY_StorageProviderSharingStatus)
 			_PKEYTOSTR(PKEY_StorageProviderStatus)
 			_PKEYTOSTR(PKEY_Subject)
 			_PKEYTOSTR(PKEY_SyncTransferStatus)
@@ -3053,9 +3099,9 @@ namespace SAVFGAME
 							wstr.append(wstr_val);
 
 							if (!((i+1)%4))
-								swprintf_s(wstr_val, L";  ", propVar.blob.pBlobData[i]);
+								swprintf_s(wstr_val, L";  "); // , propVar.blob.pBlobData[i]);
 							else
-								swprintf_s(wstr_val, L",", propVar.blob.pBlobData[i]);
+								swprintf_s(wstr_val, L","); // , propVar.blob.pBlobData[i]);
 							wstr.append(wstr_val);
 
 							if (i != (propVar.blob.cbSize - 1))

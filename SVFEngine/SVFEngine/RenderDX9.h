@@ -260,7 +260,7 @@ namespace SAVFGAME
 							break;
 						else
 						{
-							if (!(i % 15)) printf("\nRENDER : Can't reset D3D device! (%i sec.)", i);
+							if (!(i % 15)) printf("\nRENDER : Can't reset D3D device! (%i sec.)", (int)i);
 						}
 					}
 				}

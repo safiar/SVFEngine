@@ -1455,7 +1455,7 @@ namespace SAVFGAME
 				_.audiocard_buffer_f2b_m  = _.audiocard_buffer_f2b    *  _.audiocard_buffer_m;
 				_.audiocard_buffer_bytes  = _.audiocard_buffer_frames *  _.audiocard_buffer_f2b;
 
-				_.playback_1x = ceil(_CONV_1x * _.audiocard_buffer_f2b_1s) ;
+				_.playback_1x = (uint32)ceil(_CONV_1x * _.audiocard_buffer_f2b_1s) ;
 
 			// Сделал эту проверку в CAudioSessionManager, чтобы сразу отбросить непригодный к использованию интерфейс
 			//
@@ -1617,7 +1617,7 @@ namespace SAVFGAME
 				ConverterPCM.settings.origin.auto_signed = true;
 
 				ConverterPCM.settings.target.buffer      = _.window_ptr;
-				ConverterPCM.settings.target.size        = ceil( target_time * _.audiocard_buffer_f2b_1s ) ; // размер всегда на <target_time>
+				ConverterPCM.settings.target.size        = (uint32)ceil( target_time * _.audiocard_buffer_f2b_1s ) ; // размер всегда на <target_time>
 				ConverterPCM.settings.target.samples     = 0;
 				ConverterPCM.settings.target.time        = target_time; // закажем не больше <target_time> (может выйти меньше)
 				ConverterPCM.settings.target.usetime     = true;

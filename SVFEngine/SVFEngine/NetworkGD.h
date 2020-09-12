@@ -60,6 +60,8 @@ namespace SAVFGAME
 	//>> Данные, присылаемые сервером в ответ на запрос соединения
 	struct NetConnectServerData
 	{
+		NetConnectServerData(){};
+		~NetConnectServerData(){};
 		union
 		{
 			char _ [MAX_STRUCT_SIZE];

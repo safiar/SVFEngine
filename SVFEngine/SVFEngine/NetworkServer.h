@@ -71,8 +71,16 @@ namespace SAVFGAME
 		CNetServer& operator=(CNetServer&& src)			= delete;
 		CNetServer& operator=(const CNetServer& src)	= delete;
 	public:
-		CNetServer() { name = DEFAULT_SERVER_NAME; netmsg_p(1); netmsg_o(1); };
-		~CNetServer() { Close(); };
+		CNetServer()
+		{
+			name = DEFAULT_SERVER_NAME;
+			netmsg_p(1);
+			netmsg_o(1);
+		};
+		~CNetServer()
+		{
+			Close();
+		};
 		void Close()
 		{
 			if (!isInit) return;

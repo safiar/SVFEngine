@@ -84,6 +84,10 @@ int main()
 {	
 	setlocale(LC_ALL, "russian");
 
+	//timepoint 
+	std::chrono::steady_clock::time_point
+		ticktime = _TIME;
+
 #ifndef ACTIVATE_XXX_TEST
 	#if _OS_WINDOWS
 		WinMain(GetModuleHandle(NULL), NULL, NULL, SW_SHOW);

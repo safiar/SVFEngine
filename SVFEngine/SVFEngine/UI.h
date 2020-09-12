@@ -870,7 +870,13 @@ namespace SAVFGAME
 			fire.UID.SetCurPosX ( IO->mouse.client_x - scale_pos_fire_x * fire_width,  0 ); // привязка к курсору
 			fire.UID.SetCurPosY ( IO->mouse.client_y - scale_pos_fire_y * fire_height, 0 ); // привязка к курсору
 
-			arrow.UID.AddAngle(update_speed * _TIMER(time), true);		time = _TIME;
+			int update = (int)_TIMER(time);
+			if (update)
+			{
+				arrow.UID.AddAngle(update_speed * update, true);
+				time = _TIME;
+			}
+			
 			float angle = arrow.UID.GetCurAngle();
 
 			logo.Show();
@@ -1764,7 +1770,7 @@ namespace SAVFGAME
 	private:
 		CText *		ping;
 		timepoint	time;
-		uint32		time_lost   { lost + 1 };
+		uint32		time_lost   { (uint32)(lost + 1) };
 		uint32		total_ms    { 0 };
 		uint32		total_times { 0 };
 	protected:

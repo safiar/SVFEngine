@@ -2887,7 +2887,7 @@ namespace SAVFGAME
 		CPCMConverter::SoundConvertSettings::SoundInfo settings_outInfo; // returned conversion info
 		bool settings_loop { false };                                    // mix this source as a loop : default == false
 		ePCMConvStatus ERR { ePCMConvStatus_Normal };                    // output error status
-		uint64 ID { MISSING };                                           // user-specified id
+		uint64 ID { (uint64) MISSING };                                  // user-specified id
 	private:
 		bool skip { false }; // drop this source out of task (AutoRun() fix)
 	};

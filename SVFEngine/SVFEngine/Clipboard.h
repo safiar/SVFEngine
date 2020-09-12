@@ -358,11 +358,11 @@ class CClipboard
 				{
 					switch (type)
 					{
-					case CF_TEXT:          printf( "\n%s", p_text); break;
-					case CF_UNICODETEXT:  wprintf(L"\n%s", p_text); break;
+					case CF_TEXT:          printf( "\n%s", (char*)    p_text); break;
+					case CF_UNICODETEXT:  wprintf(L"\n%s", (wchar_t*) p_text); break;
 					default:
 						if (type == format.chatText)
-							wprintf(L"\nCHAT_TEXT\n%s", p_text);
+							wprintf(L"\nCHAT_TEXT\n%s", (wchar_t*) p_text);
 						break;
 					}
 					if (!GlobalUnlock(data))

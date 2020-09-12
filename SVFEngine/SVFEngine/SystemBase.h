@@ -438,8 +438,8 @@ namespace SAVFGAME
 				printf(" [0x%X]", processor_type_raw);
 				printf("\n- page size  = 0x%X", page_size);
 				printf("\n- alloc gran = 0x%X", allocation_granularity);
-				printf("\n- min addr   = 0x%X", (int)minimum_app_addr);
-				printf("\n- max addr   = 0x%X", (int)maximum_app_addr);
+				printf("\n- min addr   = 0x%llX", (size_t)minimum_app_addr);
+				printf("\n- max addr   = 0x%llX", (size_t)maximum_app_addr);
 				printf("\n- num procs  = %i", num_of_processors);
 				printf("\n- proc level = 0x%X", processor_level);
 				printf("\n- proc rev   = 0x%X", processor_revision);
@@ -450,7 +450,7 @@ namespace SAVFGAME
 						 printf("active");
 					else printf("inactive");
 				}
-				printf("\n- sys memory = %i MB", _KBTOMB(system_memory));
+				printf("\n- sys memory = %i MB", (int)_KBTOMB(system_memory));
 			}
 		} system_info;   // system data
 		struct SYSMEM
@@ -478,7 +478,7 @@ namespace SAVFGAME
 				printf("\n- Free  paging file = %5llu MB (%llu KB)", _BYTESTOMB(avail_page), _BYTESTOKB(avail_page));
 				printf("\n- Total virtual mem = 0x%llX", total_virt);
 				printf("\n- Free  virtual mem = 0x%llX", avail_virt);
-				printf("\n- Free extended mem = 0x%llX", _BYTESTOMB(avail_virt_ext), _BYTESTOKB(avail_virt_ext));
+				printf("\n- Free extended mem = 0x%llX", _BYTESTOMB(avail_virt_ext));
 			}
 		} system_memory;  // actual RAM info
 		struct SYSOS
@@ -673,7 +673,7 @@ namespace SAVFGAME
 				for (int i = 0; i < eSystemDiskName_ENUM_MAX; i++)
 				if (disk[i].presented)
 				{
-					printf("\nDrive %s - ", disk[i].root);
+					wprintf(L"\nDrive %s - ", disk[i].root);
 					switch (disk[i].type)
 					{
 					case eSystemDiskNotPresented: printf("not presented  "); break;
@@ -834,8 +834,8 @@ namespace SAVFGAME
 						_BOOLYESNO(AVX512_VNNI),		
 						_BOOLYESNO(FMA),
 						_BOOLYESNO(KNC),
-						_BOOLYESNO(SVML),
-						"end"
+						_BOOLYESNO(SVML)//,
+						//"end"
 					);
 				}
 			
@@ -1013,8 +1013,8 @@ namespace SAVFGAME
 						_BOOLYESNO(TBM),
 						_BOOLYESNO(XOP),
 						_BOOLYESNO(_3DNOWEXT),
-						_BOOLYESNO(_3DNOW),
-						"end"
+						_BOOLYESNO(_3DNOW)//,
+						//"end"
 					);
 				}
 

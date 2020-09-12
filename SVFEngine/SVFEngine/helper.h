@@ -1014,6 +1014,31 @@ namespace SAVFGAME
 		return hRes;
 	}
 
+
+	///////////////////////////////////////////////////
+
+	template <class ...TARGS>
+	inline std::string FormatString(uint16 max, std::string str, const TARGS&... args)
+	{
+		std::string result;
+		char* buf = new char [max];
+		_snprintf_s(buf, max, _TRUNCATE, str.c_str(), args...);
+		result = buf;
+		delete[] buf;
+		return result;
+	}
+
+	template <class ...TARGS>
+	inline std::wstring FormatString(uint16 max, std::wstring str, const TARGS&... args)
+	{
+		std::wstring result;
+		wchar_t* buf = new wchar_t [max];
+		_snwprintf_s(buf, max, _TRUNCATE, str.c_str(), args...);
+		result = buf;
+		delete[] buf;
+		return result;
+	}
+
 	///////////////////////////////////////////////////
 
 	//>> debug

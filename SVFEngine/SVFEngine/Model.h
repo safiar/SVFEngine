@@ -901,7 +901,9 @@ namespace SAVFGAME
 				{
 					fpbuf += strlen("illum ");
 					CODEREADSTRINGVALUE
-					sscanf_s(str,"%d", &mtl->illum);		//printf("\n%s\n%d",str,mtl.illum);	//getchar();
+					int illum;
+					sscanf_s(str,"%d", &illum);		//printf("\n%s\n%d",str,mtl.illum);	//getchar();
+					mtl->illum = (char)illum;
 				}
 				else if (Compare(fpbuf, _SLEN("bump")))
 				{

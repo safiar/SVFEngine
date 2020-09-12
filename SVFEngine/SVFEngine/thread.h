@@ -155,7 +155,15 @@ typedef std::lock_guard  <std::recursive_mutex>  rglock;
 typedef std::condition_variable cvariable;
 typedef std::recursive_mutex    rmutex;
 
-typedef std::_Cv_status cvstate;
+#ifdef _MSC_VER
+	#if _MSC_VER < 1900 // Visual Studio 2013
+		typedef std::_Cv_status cvstate;
+	#else // Visual Studio 2015, 2017, 2019
+		typedef std::cv_status cvstate;
+	#endif
+#else // ???
+	typedef std::cv_status cvstate;
+#endif
 
 #define _CV_NO_TIMEOUT  cvstate::no_timeout
 #define _CV_TIMEOUT     cvstate::timeout
@@ -817,13 +825,25 @@ namespace SAVFGAME
 				_ATM_0(waiting_for_grab);
 			}
 
+			// C/C++ -> Preprocessor -> Preprocessor Definitions
+			// __add _MSC_PLATFORM_TOOLSET=$(PlatformToolsetVersion) to make Visual Studio integrate the current Toolset's version
+			// __to the preprocessor so that your query
+
 			if (method == TRM_THREAD)
 			{
 				glock stop_thread_for_detaching (detach_block);
 
+			#if defined(_MSC_VER)
+			  #if (_MSC_VER < 1900) || (_MSC_PLATFORM_TOOLSET <= 120) // Visual Studio 2013  or  2015, 2017, 2019 with toolset for VS2013
 				_thread = std::thread(class_function,
 					class_ptr,
 					std::forward<TARGS>(args)...);
+			  #else
+				_thread = std::thread([&](){ (class_ptr->*class_function)(args...); });
+			  #endif
+			#else // ???
+				_thread = std::thread([&](){ (class_ptr->*class_function)(args...); });
+			#endif
 
 				//printf("\nRUN THREAD ID 0x%x", _thread.get_id().hash());
 
@@ -831,15 +851,24 @@ namespace SAVFGAME
 			}
 			else // TRM_ASYNC :: We need to hold <future> from std::async until next <Run> or <Close> call
 			{
-				auto func = std::mem_fn(class_function);
+				auto func  = std::mem_fn(class_function);
 
 				std::shared_ptr<               CFutureHolder< decltype(func(*class_ptr, args...)) >> future_ptr;
 				future_ptr = std::make_shared< CFutureHolder< decltype(func(*class_ptr, args...)) >>();
 
+			#if defined(_MSC_VER)
+			  #if (_MSC_VER < 1900) || (_MSC_PLATFORM_TOOLSET <= 120) // Visual Studio 2013  or  2015, 2017, 2019 with toolset for VS2013
 				(*future_ptr).result = std::async(std::launch::async,
 					func,
 					std::ref(*class_ptr),
 					std::forward<TARGS>(args)...);
+			  #else
+				(*future_ptr).result = std::async(std::launch::async, [&](){ (class_ptr->*class_function)(args...); });
+			  #endif
+			#else // ???
+				(*future_ptr).result = std::async(std::launch::async, [&](){ (class_ptr->*class_function)(args...); });
+			#endif
+
 				future_holder = future_ptr;
 			}
 
@@ -1125,10 +1154,29 @@ namespace SAVFGAME
 			}
 		};
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//template <class TFUNC, class ...TARGS>
+		//using RunTaskProcWrapper_RetNonStatic = decltype(std::mem_fn(&THREADPOOL::RunTaskProc<TFUNC, TARGS...>));
+
+		//template <class TFUNC, class ...TARGS>
+		//using RunTaskProcWrapper_RetStatic = decltype(std::mem_fn(&THREADPOOL::RunTaskProcStatic<TFUNC, TARGS...>));
+
+	#ifdef _MSC_VER
+		#if _MSC_VER < 1900 // Visual Studio 2013
+			#define MACRO_RunTaskProcWrapper_RetNonStatic   -> decltype(std::mem_fn(&THREADPOOL::RunTaskProc<TFUNC, TARGS...>))
+			#define MACRO_RunTaskProcWrapper_RetStatic      -> decltype(std::mem_fn(&THREADPOOL::RunTaskProcStatic<TFUNC, TARGS...>))
+		#else // Visual Studio 2015, 2017, 2019
+			#define MACRO_RunTaskProcWrapper_RetNonStatic
+			#define MACRO_RunTaskProcWrapper_RetStatic
+		#endif
+	#else // ???
+			#define MACRO_RunTaskProcWrapper_RetNonStatic   -> decltype(std::mem_fn(&THREADPOOL::RunTaskProc<TFUNC, TARGS...>))
+			#define MACRO_RunTaskProcWrapper_RetStatic      -> decltype(std::mem_fn(&THREADPOOL::RunTaskProcStatic<TFUNC, TARGS...>))
+	#endif
+
 		template <bool STATIC, class TFUNC, class ...TARGS>
 		struct RunTaskProcWrapper 
 		{	///////////// if we run non-static function member of some class /////////////
-			static auto Get() -> decltype(std::mem_fn(&THREADPOOL::RunTaskProc<TFUNC, TARGS...>))
+			static auto Get() MACRO_RunTaskProcWrapper_RetNonStatic
 			{
 				return std::mem_fn(&THREADPOOL::RunTaskProc<TFUNC, TARGS...>);
 			}
@@ -1136,11 +1184,13 @@ namespace SAVFGAME
 		template <             class TFUNC, class ...TARGS>
 		struct RunTaskProcWrapper <true, TFUNC, TARGS...> 
 		{	///////////// if we run static function (static member or not member or lambda) /////////////
-			static auto Get() -> decltype(std::mem_fn(&THREADPOOL::RunTaskProcStatic<TFUNC, TARGS...>))
+			static auto Get() MACRO_RunTaskProcWrapper_RetStatic
 			{
 				return std::mem_fn(&THREADPOOL::RunTaskProcStatic<TFUNC, TARGS...>);
 			}
 		};
+	#undef MACRO_RunTaskProcWrapper_RetNonStatic
+	#undef MACRO_RunTaskProcWrapper_RetStatic
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////
 		template <uint16 MAX, class T>
 		//>> При более 100000 элементов deque забивает память и слишком медленно потом её освобождает 

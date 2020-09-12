@@ -82,8 +82,17 @@ using std::static_pointer_cast;
 using std::const_pointer_cast;
 using std::dynamic_pointer_cast;
 
+#ifdef _MSC_VER
+	#if _MSC_VER < 1900 // Visual Studio 2013
+		typedef  std::chrono::system_clock::time_point     timepoint;
+	#else // Visual Studio 2015, 2017, 2019
+		typedef  std::chrono::steady_clock::time_point     timepoint;
+	#endif
+#else // ???
+	typedef  std::chrono::system_clock::time_point     timepoint;
+#endif
+
 typedef  std::chrono::steady_clock                 monoclock;
-typedef  std::chrono::system_clock::time_point     timepoint;
 typedef  std::chrono::hours                        timeh;		// hours
 typedef  std::chrono::minutes                      timem;		// minutes
 typedef  std::chrono::seconds                      times;		// seconds

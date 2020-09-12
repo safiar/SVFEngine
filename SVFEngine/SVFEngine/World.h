@@ -341,7 +341,7 @@ namespace SAVFGAME
 
 				if (sound->GetStateSpeakers() == false)
 				{
-					if (sound->ReActivateCapture() != eSoundError_TRUE)
+					if (sound->ReActivateRender() != eSoundError_TRUE)
 					{
 						 render_status = false;
 						 if (once_render)
@@ -358,7 +358,7 @@ namespace SAVFGAME
 
 				if (sound->GetStateMicrophone() == false)
 				{
-					if (sound->ReActivateRender() != eSoundError_TRUE)
+					if (sound->ReActivateCapture() != eSoundError_TRUE)
 					{
 						 capture_status = false;
 						 if (once_capture)

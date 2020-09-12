@@ -1259,10 +1259,10 @@ namespace SAVFGAME
 				printf("\n- D3DPTEXTURECAPS_VOLUMEMAP      = %s", _BOOLYESNO(d3dcaps->TextureCaps & D3DPTEXTURECAPS_VOLUMEMAP));
 				printf("\n- D3DPTEXTURECAPS_VOLUMEMAP_POW2 = %s", _BOOLYESNO(d3dcaps->TextureCaps & D3DPTEXTURECAPS_VOLUMEMAP_POW2));
 
-				printf("\nTexture-filtering caps VSHADER / 2D / CUBE / VOLUME:", d3dcaps->VertexTextureFilterCaps,
-					                                                             d3dcaps->TextureFilterCaps,
-					                                                             d3dcaps->CubeTextureFilterCaps,
-					                                                             d3dcaps->VolumeTextureFilterCaps);
+				printf("\nTexture-filtering caps VSHADER / 2D / CUBE / VOLUME:"); //, d3dcaps->VertexTextureFilterCaps,
+					                                                             //d3dcaps->TextureFilterCaps,
+					                                                             //d3dcaps->CubeTextureFilterCaps,
+					                                                             //d3dcaps->VolumeTextureFilterCaps);
 				printf("\n- D3DPTFILTERCAPS_CONVOLUTIONMONO   = %s / %s / %s / %s", _BOOLYESNO(d3dcaps->VertexTextureFilterCaps & D3DPTFILTERCAPS_CONVOLUTIONMONO),
 					                                                                _BOOLYESNO(d3dcaps->TextureFilterCaps       & D3DPTFILTERCAPS_CONVOLUTIONMONO),
 																					_BOOLYESNO(d3dcaps->CubeTextureFilterCaps   & D3DPTFILTERCAPS_CONVOLUTIONMONO),
@@ -1433,7 +1433,7 @@ namespace SAVFGAME
 
 				printf("\nMaxVertexShaderConst       = %i", d3dcaps->MaxVertexShaderConst);
 				printf("\nPixelShader1xMaxValue      = %f", d3dcaps->PixelShader1xMaxValue);
-				printf("\nMaxNpatchTessellationLevel = %i", d3dcaps->MaxNpatchTessellationLevel);
+				printf("\nMaxNpatchTessellationLevel = %f", d3dcaps->MaxNpatchTessellationLevel);
 				printf("\nNum simultaneous render targets = %i", d3dcaps->NumSimultaneousRTs);
 				printf("\nMaxVShaderInstructionsExecuted    = %i", d3dcaps->MaxVShaderInstructionsExecuted);
 				printf("\nMaxPShaderInstructionsExecuted    = %i", d3dcaps->MaxPShaderInstructionsExecuted);

@@ -348,13 +348,13 @@ namespace SAVFGAME
 		uint32 padding_before  { 0 }; // LAME : samples padding before original .wav
 		uint32 padding_after   { 0 }; // LAME : samples padding after  original .wav
 	private:
-		uint32 frame0_position { MPG_ERROR }; // initial 0-frame MP3-buffer offset
-		uint32 start_position  { MPG_ERROR }; // MP3-buffer starting offset
-		uint32 start_frame     { MPG_ERROR }; // starting frame #
-		uint32 total_frames    { MPG_ERROR }; // total frames in buffer
-		uint32 stop_frame      { MPG_ERROR }; // counter STOP frame #
-		uint32 continue_frame  { MPG_ERROR }; // pause position for Continue() mode 
-		float  frame_time      { MPG_ERROR }; // how much time presented by 1 frame
+		uint32 frame0_position { (uint32) MPG_ERROR }; // initial 0-frame MP3-buffer offset
+		uint32 start_position  { (uint32) MPG_ERROR }; // MP3-buffer starting offset
+		uint32 start_frame     { (uint32) MPG_ERROR }; // starting frame #
+		uint32 total_frames    { (uint32) MPG_ERROR }; // total frames in buffer
+		uint32 stop_frame      { (uint32) MPG_ERROR }; // counter STOP frame #
+		uint32 continue_frame  { (uint32) MPG_ERROR }; // pause position for Continue() mode 
+		float  frame_time      { (float)  MPG_ERROR }; // how much time presented by 1 frame
 
 		eMP3ConvStatus STATUS; // returning exit code
 

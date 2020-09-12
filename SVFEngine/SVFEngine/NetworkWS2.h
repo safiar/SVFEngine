@@ -1039,7 +1039,7 @@ namespace SAVFGAME
 				"\nwVersion     %04x"
 				"\nszDescription  %s"
 				"\nszSystemStatus %s"
-				"\nlpVendorInfo   %x"
+				"\nlpVendorInfo   %llx"
 				"\n",
 				wsaData.iMaxSockets,
 				wsaData.iMaxUdpDg,
@@ -1047,7 +1047,7 @@ namespace SAVFGAME
 				wsaData.wVersion,
 				wsaData.szDescription,
 				wsaData.szSystemStatus,
-				(int)wsaData.lpVendorInfo);
+				(size_t)wsaData.lpVendorInfo);
 		}
 
 	};

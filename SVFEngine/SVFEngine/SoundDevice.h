@@ -277,8 +277,8 @@ namespace SAVFGAME
 		vector<SoundDeviceProp>	propCaptureDevice;  // свойства устройств ввода
 		unsigned int numRenderDevices  {0};         // количество устройств вывода в <propRenderDevice>
 		unsigned int numCaptureDevices {0};         // количество устройств ввода в <propCaptureDevice>
-		unsigned int numRenderDefault  {MISSING};   // номер устройства вывода используемого по-умолчанию
-		unsigned int numCaptureDefault {MISSING};   // номер устройства ввода используемого по-умолчанию
+		unsigned int numRenderDefault  {(unsigned int) MISSING};   // номер устройства вывода используемого по-умолчанию
+		unsigned int numCaptureDefault {(unsigned int) MISSING};   // номер устройства ввода используемого по-умолчанию
 
 	public:
 		CSoundDevice(const CSoundDevice& src)				= delete;

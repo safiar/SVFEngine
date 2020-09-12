@@ -302,7 +302,7 @@ namespace SAVFGAME
 			printf("\n[NetClient] Server has closed connection with");
 
 			if (reason != nullptr)
-				 printf(" reason:\n            \"%s\"", reason);
+				 printf(" reason:\n            \"%s\"", (char*)reason);
 			else printf(" no reason");
 			
 			Disconnect();

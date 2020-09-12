@@ -14,7 +14,7 @@
 #include "stdafx.h"
 #include "InputCodes.h"
 
-#define  MISS_WCHAR  MISSING
+#define  MISS_WCHAR  (wchar_t)MISSING
 
 namespace SAVFGAME
 {

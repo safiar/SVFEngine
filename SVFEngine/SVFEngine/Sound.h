@@ -2754,7 +2754,7 @@ namespace SAVFGAME
 
 							if (debug_time > DEBUG_TIME_MIN)
 							{
-								wprintf(L"\nERROR : SoundMixer lost MixerPlayThread! (%i ms past)", debug_time);
+								wprintf(L"\nERROR : SoundMixer lost MixerPlayThread! (%i ms past)", (int)debug_time);
 								_.ERR = eSoundError_MixerLostThr;
 								_.ERR_once = true;
 							}
@@ -4779,7 +4779,7 @@ namespace SAVFGAME
 				list->_quick_close();
 
 				if (hRes >= eSoundError__NORMAL_END || hRes <= eSoundError__NORMAL_BEGIN)
-					wprintf(L"\nSound GID=0x%X (%s) exited with code 0x%X", 
+					wprintf(L"\nSound GID=0x%llX (%s) exited with code 0x%X", 
 						sound.GID, sound.filename.c_str(), hRes);
 			}
 
@@ -7071,7 +7071,7 @@ namespace SAVFGAME
 				printf("\nMP3 converter ERROR (exit code = %i)", result);
 			else
 			{
-				printf("\nMP3 converter done - FULL TIME : %i ms", _TIMER(time));
+				printf("\nMP3 converter done - FULL TIME : %i ms", (int)_TIMER(time));
 
 				SNDDATA out;
 
